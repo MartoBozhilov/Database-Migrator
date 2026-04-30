@@ -1,4 +1,6 @@
-package com.db_migrator.etl_system.model.entity;
+package com.db_migrator.etl_system.model.entity.user;
+
+import com.db_migrator.etl_system.model.entity.BaseEntity;
 
 import com.db_migrator.etl_system.model.enums.UserRoleEnum;
 import jakarta.persistence.Column;

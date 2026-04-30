@@ -1,4 +1,6 @@
-package com.db_migrator.etl_system.model.entity;
+package com.db_migrator.etl_system.model.entity.metadata;
+
+import com.db_migrator.etl_system.model.entity.BaseEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Immutable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +23,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Immutable
 @Table(
         name = "tables_metadata",
         uniqueConstraints = @UniqueConstraint(

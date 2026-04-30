@@ -1,4 +1,7 @@
-package com.db_migrator.etl_system.model.entity;
+package com.db_migrator.etl_system.model.entity.connector;
+
+import com.db_migrator.etl_system.model.entity.BaseEntity;
+import com.db_migrator.etl_system.model.entity.user.User;
 
 import com.db_migrator.etl_system.model.enums.ConnectorTypeEnum;
 import com.db_migrator.etl_system.model.enums.DatabaseTypeEnum;
@@ -10,6 +13,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -23,7 +27,13 @@ import java.util.Date;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "connectors")
+@Table(
+        name = "connectors",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_connector_name_organization",
+                columnNames = {"name", "created_by"}
+        )
+)
 public class Connector extends BaseEntity {
 
     @NotNull
