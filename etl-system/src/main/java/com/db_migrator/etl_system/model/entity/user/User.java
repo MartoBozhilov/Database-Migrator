@@ -14,11 +14,13 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Getter
@@ -26,6 +28,7 @@ import java.util.List;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Table(name = "users")
 public class User extends BaseEntity {
 
@@ -49,10 +52,6 @@ public class User extends BaseEntity {
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
-    @NotNull
-    @Column(name = "phone_number")
-    private String phoneNumber;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
@@ -62,5 +61,14 @@ public class User extends BaseEntity {
             name = "users_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @Builder.Default
     private List<UserRole> roles = new ArrayList<>();
+
+    @NotNull
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private Long tokenVersion = 1L;
+
+    @Column(name = "created_at")
+    private Date createdAt;
 }

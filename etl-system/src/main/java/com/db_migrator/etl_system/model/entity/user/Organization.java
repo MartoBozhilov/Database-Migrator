@@ -8,11 +8,13 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Getter
@@ -20,11 +22,12 @@ import java.util.List;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Table(name = "organizations")
 public class Organization extends BaseEntity {
 
     @NotNull
-    @Column(name = "name")
+    @Column(name = "name", unique = true)
     private String name;
 
     @NotNull
@@ -33,8 +36,12 @@ public class Organization extends BaseEntity {
 
     @NotNull
     @Column(name = "location")
-    private String Location;
+    private String location;
 
     @OneToMany(mappedBy = "organization")
+    @Builder.Default
     private List<User> users = new ArrayList<>();
+
+    @Column(name = "created_at")
+    private Date createdAt;
 }
