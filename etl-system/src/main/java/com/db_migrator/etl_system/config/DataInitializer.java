@@ -32,6 +32,7 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         initializeRoles();
         initializeDefaultAdminUser();
+        initializeTestUsers();
     }
 
     private void initializeRoles() {
@@ -90,6 +91,74 @@ public class DataInitializer implements CommandLineRunner {
         log.info("  Email: admin@system.com");
         log.info("  Password: Admin123!");
         log.info("  Roles: {}", adminUser.getRoles().stream()
+                .map(role -> role.getRole().name())
+                .toList());
+        log.info("========================================");
+    }
+
+    private void initializeTestUsers() {
+        if (userRepository.count() > 1) {
+            log.info("Test users already exist. Skipping test users creation.");
+            return;
+        }
+
+        log.info("Creating test users for Phase 3 testing...");
+
+        Organization testOrg = Organization.builder()
+                .name("Test Organization")
+                .companyName("Test Company")
+                .location("Test Location")
+                .createdAt(new Date())
+                .build();
+        testOrg = organizationRepository.save(testOrg);
+        log.info("Created test organization: {}", testOrg.getName());
+
+        User migrationAdmin = User.builder()
+                .username("migration_admin")
+                .email("migration.admin@test.com")
+                .password(passwordEncoder.encode("Test123!"))
+                .firstName("Migration")
+                .lastName("Admin")
+                .organization(testOrg)
+                .roles(new ArrayList<>())
+                .createdAt(new Date())
+                .build();
+
+        organizationService.assignAdministrativeRoles(migrationAdmin, UserRoleEnum.MIGRATION_ADMIN);
+        migrationAdmin = userRepository.save(migrationAdmin);
+
+        User connectorUser = User.builder()
+                .username("connector_user")
+                .email("connector.user@test.com")
+                .password(passwordEncoder.encode("Test123!"))
+                .firstName("Connector")
+                .lastName("User")
+                .organization(testOrg)
+                .roles(new ArrayList<>())
+                .createdAt(new Date())
+                .build();
+
+        UserRole connectorRole = userRoleRepository.findByRole(UserRoleEnum.CONNECTOR_USER)
+                .orElseThrow(() -> new RuntimeException("CONNECTOR_USER role not found"));
+        connectorUser.getRoles().add(connectorRole);
+        connectorUser = userRepository.save(connectorUser);
+
+        log.info("========================================");
+        log.info("Test users created successfully:");
+        log.info("");
+        log.info("MIGRATION_ADMIN:");
+        log.info("  Email: migration.admin@test.com");
+        log.info("  Password: Test123!");
+        log.info("  Organization: {}", testOrg.getName());
+        log.info("  Roles: {}", migrationAdmin.getRoles().stream()
+                .map(role -> role.getRole().name())
+                .toList());
+        log.info("");
+        log.info("CONNECTOR_USER:");
+        log.info("  Email: connector.user@test.com");
+        log.info("  Password: Test123!");
+        log.info("  Organization: {}", testOrg.getName());
+        log.info("  Roles: {}", connectorUser.getRoles().stream()
                 .map(role -> role.getRole().name())
                 .toList());
         log.info("========================================");

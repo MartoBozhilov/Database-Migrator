@@ -5,6 +5,7 @@ import com.db_migrator.etl_system.model.entity.connector.Connector;
 import com.db_migrator.etl_system.model.entity.user.User;
 
 import com.db_migrator.etl_system.model.enums.ScanStatusEnum;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -14,12 +15,11 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.Immutable;
 
 import java.util.ArrayList;
@@ -27,54 +27,48 @@ import java.util.Date;
 import java.util.List;
 
 @Getter
-@Setter
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Immutable
-@Table(
-        name = "system_scans",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_system_scan_name_organization",
-                columnNames = {"name", "created_by"}
-        )
-)
+@Table(name = "system_scans")
 public class SystemScan extends BaseEntity {
 
     @NotNull
-    @Column
+    @Column(nullable = false, updatable = false)
     private String name;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", nullable = false)
+    @JoinColumn(name = "created_by", nullable = false, updatable = false)
     private User createdBy;
 
-    @NotNull
-    @Column(name = "created_at")
+    @Column(name = "created_at", updatable = false)
     private Date createdAt;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "source_connector", nullable = false)
+    @JoinColumn(name = "source_connector", nullable = false, updatable = false)
     private Connector sourceConnector;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    private ScanStatusEnum status = ScanStatusEnum.RUNNING;
+    @Column(name = "status", nullable = false, length = 20, updatable = false)
+    private ScanStatusEnum status;
 
-    @Column(name = "started_at")
+    @Column(name = "started_at", updatable = false)
     private Date startedAt;
 
-    @Column(name = "completed_at")
+    @Column(name = "completed_at", updatable = false)
     private Date completedAt;
 
-    @Column(name = "error_message", columnDefinition = "TEXT")
+    @Column(name = "error_message", updatable = false, columnDefinition = "TEXT")
     private String errorMessage;
 
-    @OneToMany(mappedBy = "systemScan")
+    @OneToMany(mappedBy = "systemScan", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TableMetadata> tableMetadataList = new ArrayList<>();
 
-    @OneToMany(mappedBy = "systemScan")
+    @OneToMany(mappedBy = "systemScan", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RelationMetadata> relationMetadataList = new ArrayList<>();
 }

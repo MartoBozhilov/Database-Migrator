@@ -7,40 +7,34 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.Immutable;
 
 @Entity
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Immutable
-@Table(
-        name = "columns_metadata",
-        uniqueConstraints = @UniqueConstraint(
-                columnNames = {"table_metadata_id", "column_name"}
-        )
-)
+@Table(name = "columns_metadata")
 public class ColumnMetadata extends BaseEntity {
 
     @ManyToOne
-    @JoinColumn(name = "table_metadata_id", nullable = false)
+    @JoinColumn(name = "table_metadata_id", nullable = false, updatable = false)
     private TableMetadata table;
 
-    @Column(name = "column_name", nullable = false)
+    @Column(name = "column_name", nullable = false, updatable = false)
     private String columnName;
 
-    @Column(name = "data_type", nullable = false)
+    @Column(name = "data_type", nullable = false, updatable = false)
     private String dataType;
 
-    @Column(name = "is_nullable", nullable = false)
+    @Column(name = "is_nullable", nullable = false, updatable = false)
     private Boolean isNullable;
 
-    @Column(name = "length")
+    @Column(name = "length", updatable = false)
     private Integer length;
 }

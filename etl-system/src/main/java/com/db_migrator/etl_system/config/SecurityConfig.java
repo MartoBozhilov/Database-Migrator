@@ -32,10 +32,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // CSRF disabled because:
-                // 1. Using JWT tokens in Authorization header (not cookies)
-                // 2. Stateless authentication (SessionCreationPolicy.STATELESS)
-                // If cookies are added in the future, MUST re-enable CSRF
+                // CSRF disabled
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
