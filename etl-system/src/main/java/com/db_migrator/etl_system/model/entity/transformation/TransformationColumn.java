@@ -4,6 +4,7 @@ import com.db_migrator.etl_system.model.entity.BaseEntity;
 import com.db_migrator.etl_system.model.entity.metadata.ColumnMetadata;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -31,9 +32,9 @@ public class TransformationColumn extends BaseEntity {
     private TransformationTable transformationTable;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "source_column_metadata_id", nullable = false)
-    private ColumnMetadata sourceColumnMetadata;
+    @JoinColumn(name = "source_column_metadata_id")
+    private ColumnMetadata sourceColumnMetadata;  // NULL for ADD_COLUMN
 
-    @OneToMany(mappedBy = "transformationColumn", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "transformationColumn", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<ColumnTransformationAssignment> assignments = new ArrayList<>();
 }

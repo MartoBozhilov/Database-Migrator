@@ -1,0 +1,118 @@
+{
+  "sourceDatabase": "MYSQL",
+  "targetDatabase": "MSSQL",
+  "mappings": {
+    "TINYINT": [
+      {"targetType": "tinyint", "dataLossRisk": false},
+      {"targetType": "smallint", "dataLossRisk": false}
+    ],
+    "SMALLINT": [
+      {"targetType": "smallint", "dataLossRisk": false},
+      {"targetType": "int", "dataLossRisk": false}
+    ],
+    "MEDIUMINT": [
+      {"targetType": "int", "dataLossRisk": false}
+    ],
+    "INT": [
+      {"targetType": "int", "dataLossRisk": false},
+      {"targetType": "bigint", "dataLossRisk": false}
+    ],
+    "INTEGER": [
+      {"targetType": "int", "dataLossRisk": false},
+      {"targetType": "bigint", "dataLossRisk": false}
+    ],
+    "BIGINT": [
+      {"targetType": "bigint", "dataLossRisk": false}
+    ],
+    "DECIMAL": [
+      {"targetType": "decimal", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false},
+      {"targetType": "int", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"}
+    ],
+    "NUMERIC": [
+      {"targetType": "numeric", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false}
+    ],
+    "FLOAT": [
+      {"targetType": "float", "dataLossRisk": false},
+      {"targetType": "real", "dataLossRisk": false}
+    ],
+    "DOUBLE": [
+      {"targetType": "float", "dataLossRisk": false}
+    ],
+    "CHAR": [
+      {"targetType": "char", "dataLossRisk": false},
+      {"targetType": "nchar", "dataLossRisk": false},
+      {"targetType": "varchar", "dataLossRisk": false}
+    ],
+    "VARCHAR": [
+      {"targetType": "varchar", "dataLossRisk": false},
+      {"targetType": "nvarchar", "dataLossRisk": false},
+      {"targetType": "text", "dataLossRisk": false}
+    ],
+    "TEXT": [
+      {"targetType": "text", "dataLossRisk": false},
+      {"targetType": "varchar(max)", "dataLossRisk": false}
+    ],
+    "TINYTEXT": [
+      {"targetType": "varchar", "dataLossRisk": false},
+      {"targetType": "text", "dataLossRisk": false}
+    ],
+    "MEDIUMTEXT": [
+      {"targetType": "text", "dataLossRisk": false},
+      {"targetType": "varchar(max)", "dataLossRisk": false}
+    ],
+    "LONGTEXT": [
+      {"targetType": "text", "dataLossRisk": false},
+      {"targetType": "varchar(max)", "dataLossRisk": false}
+    ],
+    "BLOB": [
+      {"targetType": "varbinary(max)", "dataLossRisk": false},
+      {"targetType": "image", "dataLossRisk": false}
+    ],
+    "TINYBLOB": [
+      {"targetType": "varbinary", "dataLossRisk": false}
+    ],
+    "MEDIUMBLOB": [
+      {"targetType": "varbinary(max)", "dataLossRisk": false}
+    ],
+    "LONGBLOB": [
+      {"targetType": "varbinary(max)", "dataLossRisk": false}
+    ],
+    "DATE": [
+      {"targetType": "date", "dataLossRisk": false}
+    ],
+    "DATETIME": [
+      {"targetType": "datetime", "dataLossRisk": false},
+      {"targetType": "datetime2", "dataLossRisk": false}
+    ],
+    "TIMESTAMP": [
+      {"targetType": "datetime2", "dataLossRisk": false},
+      {"targetType": "datetimeoffset", "dataLossRisk": false}
+    ],
+    "TIME": [
+      {"targetType": "time", "dataLossRisk": false}
+    ],
+    "YEAR": [
+      {"targetType": "smallint", "dataLossRisk": false},
+      {"targetType": "int", "dataLossRisk": false}
+    ],
+    "BOOLEAN": [
+      {"targetType": "bit", "dataLossRisk": false}
+    ],
+    "TINYINT(1)": [
+      {"targetType": "bit", "dataLossRisk": false}
+    ],
+    "JSON": [
+      {"targetType": "nvarchar(max)", "dataLossRisk": false, "warning": "JSON stored as text, no native JSON support"}
+    ],
+    "ENUM": [
+      {"targetType": "varchar", "dataLossRisk": false},
+      {"targetType": "nvarchar", "dataLossRisk": false}
+    ],
+    "SET": [
+      {"targetType": "varchar", "dataLossRisk": false},
+      {"targetType": "nvarchar", "dataLossRisk": false}
+    ]
+  }
+}

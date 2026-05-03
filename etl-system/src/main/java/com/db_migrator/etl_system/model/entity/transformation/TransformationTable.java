@@ -31,12 +31,12 @@ public class TransformationTable extends BaseEntity {
     private TransformationModel transformationModel;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "source_table_metadata_id", nullable = false)
-    private TableMetadata sourceTableMetadata;
+    @JoinColumn(name = "source_table_metadata_id")
+    private TableMetadata sourceTableMetadata;  // NULL for ADD_TABLE
 
     @OneToMany(mappedBy = "transformationTable", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TransformationColumn> columns = new ArrayList<>();
 
-    @OneToMany(mappedBy = "transformationTable", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "transformationTable", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<TableTransformationAssignment> assignments = new ArrayList<>();
 }

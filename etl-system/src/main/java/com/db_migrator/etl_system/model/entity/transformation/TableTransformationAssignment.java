@@ -16,8 +16,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Date;
-
 @Entity
 @Getter
 @Setter
@@ -34,10 +32,14 @@ public class TableTransformationAssignment extends BaseEntity {
     @Column(name = "transformation_type", nullable = false, length = 50)
     private TableTransformationType transformationType;
 
-    // Parameter for RENAME_TABLE
-    @Column(name = "new_name")
+    // For RENAME_TABLE
+    @Column(name = "new_name", length = 64)
     private String newName;
 
-    @Column(name = "created_at", nullable = false)
-    private Date createdAt = new Date();
+    // For ADD_TABLE (user-created table definition)
+    @Column(name = "table_name", length = 64)
+    private String tableName;
+
+    @Column(name = "id_generation_strategy", length = 50)
+    private String idGenerationStrategy;  // AUTO_INCREMENT, UUID, SEQUENCE
 }

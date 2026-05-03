@@ -1,0 +1,88 @@
+{
+  "sourceDatabase": "MSSQL",
+  "targetDatabase": "POSTGRESQL",
+  "mappings": {
+    "TINYINT": [
+      {"targetType": "smallint", "dataLossRisk": false}
+    ],
+    "SMALLINT": [
+      {"targetType": "smallint", "dataLossRisk": false}
+    ],
+    "INT": [
+      {"targetType": "integer", "dataLossRisk": false}
+    ],
+    "BIGINT": [
+      {"targetType": "bigint", "dataLossRisk": false}
+    ],
+    "DECIMAL": [
+      {"targetType": "numeric", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false},
+      {"targetType": "integer", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"}
+    ],
+    "NUMERIC": [
+      {"targetType": "numeric", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false}
+    ],
+    "FLOAT": [
+      {"targetType": "double precision", "dataLossRisk": false}
+    ],
+    "REAL": [
+      {"targetType": "real", "dataLossRisk": false}
+    ],
+    "CHAR": [
+      {"targetType": "character", "dataLossRisk": false},
+      {"targetType": "varchar", "dataLossRisk": false}
+    ],
+    "NCHAR": [
+      {"targetType": "character", "dataLossRisk": false}
+    ],
+    "VARCHAR": [
+      {"targetType": "character varying", "dataLossRisk": false},
+      {"targetType": "varchar", "dataLossRisk": false}
+    ],
+    "NVARCHAR": [
+      {"targetType": "character varying", "dataLossRisk": false},
+      {"targetType": "varchar", "dataLossRisk": false}
+    ],
+    "TEXT": [
+      {"targetType": "text", "dataLossRisk": false}
+    ],
+    "VARCHAR(MAX)": [
+      {"targetType": "text", "dataLossRisk": false}
+    ],
+    "NVARCHAR(MAX)": [
+      {"targetType": "text", "dataLossRisk": false}
+    ],
+    "VARBINARY": [
+      {"targetType": "bytea", "dataLossRisk": false}
+    ],
+    "VARBINARY(MAX)": [
+      {"targetType": "bytea", "dataLossRisk": false}
+    ],
+    "IMAGE": [
+      {"targetType": "bytea", "dataLossRisk": false}
+    ],
+    "DATE": [
+      {"targetType": "date", "dataLossRisk": false}
+    ],
+    "DATETIME": [
+      {"targetType": "timestamp", "dataLossRisk": false}
+    ],
+    "DATETIME2": [
+      {"targetType": "timestamp", "dataLossRisk": false}
+    ],
+    "DATETIMEOFFSET": [
+      {"targetType": "timestamp with time zone", "dataLossRisk": false}
+    ],
+    "TIME": [
+      {"targetType": "time", "dataLossRisk": false}
+    ],
+    "BIT": [
+      {"targetType": "boolean", "dataLossRisk": false}
+    ],
+    "UNIQUEIDENTIFIER": [
+      {"targetType": "uuid", "dataLossRisk": false},
+      {"targetType": "varchar(36)", "dataLossRisk": false}
+    ]
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "sourceDatabase": "POSTGRESQL",
+  "targetDatabase": "MSSQL",
+  "mappings": {
+    "SMALLINT": [
+      {"targetType": "smallint", "dataLossRisk": false}
+    ],
+    "INTEGER": [
+      {"targetType": "int", "dataLossRisk": false}
+    ],
+    "BIGINT": [
+      {"targetType": "bigint", "dataLossRisk": false}
+    ],
+    "NUMERIC": [
+      {"targetType": "numeric", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false},
+      {"targetType": "int", "dataLossRisk": true, "warning": "Data loss: numeric precision will be lost"}
+    ],
+    "DECIMAL": [
+      {"targetType": "decimal", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false}
+    ],
+    "REAL": [
+      {"targetType": "real", "dataLossRisk": false},
+      {"targetType": "float", "dataLossRisk": false}
+    ],
+    "DOUBLE PRECISION": [
+      {"targetType": "float", "dataLossRisk": false}
+    ],
+    "CHARACTER": [
+      {"targetType": "char", "dataLossRisk": false},
+      {"targetType": "nchar", "dataLossRisk": false}
+    ],
+    "CHARACTER VARYING": [
+      {"targetType": "varchar", "dataLossRisk": false},
+      {"targetType": "nvarchar", "dataLossRisk": false}
+    ],
+    "VARCHAR": [
+      {"targetType": "varchar", "dataLossRisk": false},
+      {"targetType": "nvarchar", "dataLossRisk": false}
+    ],
+    "TEXT": [
+      {"targetType": "text", "dataLossRisk": false},
+      {"targetType": "varchar(max)", "dataLossRisk": false}
+    ],
+    "BYTEA": [
+      {"targetType": "varbinary(max)", "dataLossRisk": false}
+    ],
+    "DATE": [
+      {"targetType": "date", "dataLossRisk": false}
+    ],
+    "TIMESTAMP": [
+      {"targetType": "datetime2", "dataLossRisk": false}
+    ],
+    "TIMESTAMP WITHOUT TIME ZONE": [
+      {"targetType": "datetime2", "dataLossRisk": false}
+    ],
+    "TIMESTAMP WITH TIME ZONE": [
+      {"targetType": "datetimeoffset", "dataLossRisk": false}
+    ],
+    "TIME": [
+      {"targetType": "time", "dataLossRisk": false}
+    ],
+    "TIME WITHOUT TIME ZONE": [
+      {"targetType": "time", "dataLossRisk": false}
+    ],
+    "TIME WITH TIME ZONE": [
+      {"targetType": "time", "dataLossRisk": false}
+    ],
+    "BOOLEAN": [
+      {"targetType": "bit", "dataLossRisk": false}
+    ],
+    "JSON": [
+      {"targetType": "nvarchar(max)", "dataLossRisk": false, "warning": "JSON stored as text, no native JSON support"}
+    ],
+    "JSONB": [
+      {"targetType": "nvarchar(max)", "dataLossRisk": false, "warning": "JSONB stored as text, no native JSON support"}
+    ],
+    "UUID": [
+      {"targetType": "uniqueidentifier", "dataLossRisk": false},
+      {"targetType": "varchar(36)", "dataLossRisk": false}
+    ],
+    "SERIAL": [
+      {"targetType": "int identity", "dataLossRisk": false}
+    ],
+    "BIGSERIAL": [
+      {"targetType": "bigint identity", "dataLossRisk": false}
+    ]
+  }
+}

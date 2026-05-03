@@ -13,7 +13,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -29,17 +28,10 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(
-        name = "transformation_models",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_transformation_model_name_organization",
-                columnNames = {"name", "created_by"}
-        )
-)
+@Table(name = "transformation_models")
 public class TransformationModel extends BaseEntity {
 
-    @NotNull
-    @Column
+    @Column(nullable = false)
     private String name;
 
     @NotNull
@@ -52,13 +44,16 @@ public class TransformationModel extends BaseEntity {
     private Date createdAt = new Date();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "system_scan_id", nullable = false)
+    @JoinColumn(name = "system_scan_id", nullable = false, updatable = false)
     private SystemScan systemScan;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "target_connector_id")
+    @JoinColumn(name = "target_connector_id", updatable = false)
     private Connector targetConnector;
 
     @OneToMany(mappedBy = "transformationModel", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TransformationTable> transformationTables = new ArrayList<>();
+
+    @OneToMany(mappedBy = "transformationModel", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TransformationRelation> transformationRelations = new ArrayList<>();
 }

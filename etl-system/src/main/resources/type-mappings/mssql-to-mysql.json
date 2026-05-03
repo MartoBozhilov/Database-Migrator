@@ -1,0 +1,86 @@
+{
+  "sourceDatabase": "MSSQL",
+  "targetDatabase": "MYSQL",
+  "mappings": {
+    "TINYINT": [
+      {"targetType": "tinyint", "dataLossRisk": false}
+    ],
+    "SMALLINT": [
+      {"targetType": "smallint", "dataLossRisk": false}
+    ],
+    "INT": [
+      {"targetType": "int", "dataLossRisk": false}
+    ],
+    "BIGINT": [
+      {"targetType": "bigint", "dataLossRisk": false}
+    ],
+    "DECIMAL": [
+      {"targetType": "decimal", "dataLossRisk": false},
+      {"targetType": "int", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"}
+    ],
+    "NUMERIC": [
+      {"targetType": "numeric", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false}
+    ],
+    "FLOAT": [
+      {"targetType": "double", "dataLossRisk": false}
+    ],
+    "REAL": [
+      {"targetType": "float", "dataLossRisk": false}
+    ],
+    "CHAR": [
+      {"targetType": "char", "dataLossRisk": false}
+    ],
+    "NCHAR": [
+      {"targetType": "char", "dataLossRisk": false}
+    ],
+    "VARCHAR": [
+      {"targetType": "varchar", "dataLossRisk": false}
+    ],
+    "NVARCHAR": [
+      {"targetType": "varchar", "dataLossRisk": false}
+    ],
+    "TEXT": [
+      {"targetType": "text", "dataLossRisk": false},
+      {"targetType": "longtext", "dataLossRisk": false}
+    ],
+    "VARCHAR(MAX)": [
+      {"targetType": "longtext", "dataLossRisk": false}
+    ],
+    "NVARCHAR(MAX)": [
+      {"targetType": "longtext", "dataLossRisk": false}
+    ],
+    "VARBINARY": [
+      {"targetType": "blob", "dataLossRisk": false}
+    ],
+    "VARBINARY(MAX)": [
+      {"targetType": "longblob", "dataLossRisk": false}
+    ],
+    "IMAGE": [
+      {"targetType": "longblob", "dataLossRisk": false}
+    ],
+    "DATE": [
+      {"targetType": "date", "dataLossRisk": false}
+    ],
+    "DATETIME": [
+      {"targetType": "datetime", "dataLossRisk": false}
+    ],
+    "DATETIME2": [
+      {"targetType": "datetime", "dataLossRisk": false}
+    ],
+    "DATETIMEOFFSET": [
+      {"targetType": "timestamp", "dataLossRisk": false}
+    ],
+    "TIME": [
+      {"targetType": "time", "dataLossRisk": false}
+    ],
+    "BIT": [
+      {"targetType": "tinyint(1)", "dataLossRisk": false},
+      {"targetType": "boolean", "dataLossRisk": false}
+    ],
+    "UNIQUEIDENTIFIER": [
+      {"targetType": "char(36)", "dataLossRisk": false},
+      {"targetType": "varchar(36)", "dataLossRisk": false}
+    ]
+  }
+}

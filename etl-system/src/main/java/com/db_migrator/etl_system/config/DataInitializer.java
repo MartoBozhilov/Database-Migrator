@@ -127,11 +127,11 @@ public class DataInitializer implements CommandLineRunner {
         organizationService.assignAdministrativeRoles(migrationAdmin, UserRoleEnum.MIGRATION_ADMIN);
         migrationAdmin = userRepository.save(migrationAdmin);
 
-        User connectorUser = User.builder()
+        User operationUser = User.builder()
                 .username("connector_user")
                 .email("connector.user@test.com")
                 .password(passwordEncoder.encode("Test123!"))
-                .firstName("Connector")
+                .firstName("Operation")
                 .lastName("User")
                 .organization(testOrg)
                 .roles(new ArrayList<>())
@@ -140,8 +140,11 @@ public class DataInitializer implements CommandLineRunner {
 
         UserRole connectorRole = userRoleRepository.findByRole(UserRoleEnum.CONNECTOR_USER)
                 .orElseThrow(() -> new RuntimeException("CONNECTOR_USER role not found"));
-        connectorUser.getRoles().add(connectorRole);
-        connectorUser = userRepository.save(connectorUser);
+        UserRole modelRole = userRoleRepository.findByRole(UserRoleEnum.TRANSFORMATION_MODEL_USER)
+                .orElseThrow(() -> new RuntimeException("CONNECTOR_USER role not found"));
+        operationUser.getRoles().add(connectorRole);
+        operationUser.getRoles().add(modelRole);
+        operationUser = userRepository.save(operationUser);
 
         log.info("========================================");
         log.info("Test users created successfully:");
@@ -158,7 +161,7 @@ public class DataInitializer implements CommandLineRunner {
         log.info("  Email: connector.user@test.com");
         log.info("  Password: Test123!");
         log.info("  Organization: {}", testOrg.getName());
-        log.info("  Roles: {}", connectorUser.getRoles().stream()
+        log.info("  Roles: {}", operationUser.getRoles().stream()
                 .map(role -> role.getRole().name())
                 .toList());
         log.info("========================================");

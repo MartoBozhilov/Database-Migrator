@@ -11,6 +11,7 @@ import com.db_migrator.etl_system.model.enums.ConnectorTypeEnum;
 import com.db_migrator.etl_system.model.enums.ScanStatusEnum;
 import com.db_migrator.etl_system.repository.ConnectorRepository;
 import com.db_migrator.etl_system.repository.SystemScanRepository;
+import com.db_migrator.etl_system.repository.TransformationModelRepository;
 import com.db_migrator.etl_system.security.SecurityUtils;
 import com.db_migrator.etl_system.service.metadata.MetadataExtractionService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class SystemScanService {
 
     private final SystemScanRepository scanRepository;
     private final ConnectorRepository connectorRepository;
+    private final TransformationModelRepository transformationModelRepository;
     private final MetadataExtractionService metadataExtractionService;
     private final SecurityUtils securityUtils;
     private final ResponseMapper responseMapper;
@@ -111,6 +113,12 @@ public class SystemScanService {
         SystemScan scan = scanRepository
                 .findByIdAndCreatedBy_Organization_Id(id, orgId)
                 .orElseThrow(() -> new RuntimeException("System scan not found"));
+
+        if (transformationModelRepository.existsBySystemScan_Id(scan.getId())) {
+            throw new RuntimeException("Cannot delete scan '" + scan.getName() +
+                    "' because it has associated transformation models. Please delete the transformation models first.");
+        }
+
         scanRepository.delete(scan);
     }
 

@@ -34,22 +34,29 @@ public class ColumnTransformationAssignment extends BaseEntity {
     @Column(name = "transformation_type", nullable = false, length = 50)
     private ColumnTransformationType transformationType;
 
-    @Column(name = "created_at", nullable = false)
-    private Date createdAt = new Date();
+    // ===== TRANSFORMATION PARAMETERS =====
 
     // For RENAME_COLUMN
-    @Column(name = "new_name")
+    @Column(name = "new_name", length = 64)
     private String newName;
 
     // For CHANGE_TYPE
     @Column(name = "target_data_type", length = 100)
     private String targetDataType;
 
-    // For EXPRESSION
-    @Column(name = "expression", columnDefinition = "TEXT")
-    private String expression;
+    // For ADD_COLUMN (user-created column definition)
+    @Column(name = "column_name", length = 64)
+    private String columnName;
 
-    // For DEFAULT_VALUE
-    @Column(name = "default_value")
+    @Column(name = "data_type", length = 100)
+    private String dataType;
+
+    @Column(name = "is_nullable")
+    private Boolean isNullable;
+
+    @Column(name = "is_primary_key")
+    private Boolean isPrimaryKey;
+
+    @Column(name = "default_value", length = 500)
     private String defaultValue;
 }

@@ -1,0 +1,91 @@
+{
+  "sourceDatabase": "POSTGRESQL",
+  "targetDatabase": "MYSQL",
+  "mappings": {
+    "SMALLINT": [
+      {"targetType": "smallint", "dataLossRisk": false},
+      {"targetType": "int", "dataLossRisk": false}
+    ],
+    "INTEGER": [
+      {"targetType": "int", "dataLossRisk": false}
+    ],
+    "BIGINT": [
+      {"targetType": "bigint", "dataLossRisk": false}
+    ],
+    "NUMERIC": [
+      {"targetType": "decimal", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false},
+      {"targetType": "int", "dataLossRisk": true, "warning": "Data loss: numeric precision will be lost"}
+    ],
+    "DECIMAL": [
+      {"targetType": "decimal", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false}
+    ],
+    "REAL": [
+      {"targetType": "float", "dataLossRisk": false}
+    ],
+    "DOUBLE PRECISION": [
+      {"targetType": "double", "dataLossRisk": false}
+    ],
+    "CHARACTER": [
+      {"targetType": "char", "dataLossRisk": false}
+    ],
+    "CHARACTER VARYING": [
+      {"targetType": "varchar", "dataLossRisk": false}
+    ],
+    "VARCHAR": [
+      {"targetType": "varchar", "dataLossRisk": false}
+    ],
+    "TEXT": [
+      {"targetType": "text", "dataLossRisk": false},
+      {"targetType": "longtext", "dataLossRisk": false}
+    ],
+    "BYTEA": [
+      {"targetType": "blob", "dataLossRisk": false},
+      {"targetType": "longblob", "dataLossRisk": false}
+    ],
+    "DATE": [
+      {"targetType": "date", "dataLossRisk": false}
+    ],
+    "TIMESTAMP": [
+      {"targetType": "datetime", "dataLossRisk": false}
+    ],
+    "TIMESTAMP WITHOUT TIME ZONE": [
+      {"targetType": "datetime", "dataLossRisk": false}
+    ],
+    "TIMESTAMP WITH TIME ZONE": [
+      {"targetType": "timestamp", "dataLossRisk": false}
+    ],
+    "TIME": [
+      {"targetType": "time", "dataLossRisk": false}
+    ],
+    "TIME WITHOUT TIME ZONE": [
+      {"targetType": "time", "dataLossRisk": false}
+    ],
+    "TIME WITH TIME ZONE": [
+      {"targetType": "time", "dataLossRisk": false}
+    ],
+    "BOOLEAN": [
+      {"targetType": "tinyint(1)", "dataLossRisk": false},
+      {"targetType": "boolean", "dataLossRisk": false}
+    ],
+    "JSON": [
+      {"targetType": "json", "dataLossRisk": false},
+      {"targetType": "longtext", "dataLossRisk": false}
+    ],
+    "JSONB": [
+      {"targetType": "json", "dataLossRisk": false},
+      {"targetType": "longtext", "dataLossRisk": false}
+    ],
+    "UUID": [
+      {"targetType": "char(36)", "dataLossRisk": false},
+      {"targetType": "varchar(36)", "dataLossRisk": false}
+    ],
+    "SERIAL": [
+      {"targetType": "int auto_increment", "dataLossRisk": false}
+    ],
+    "BIGSERIAL": [
+      {"targetType": "bigint auto_increment", "dataLossRisk": false}
+    ]
+  }
+}

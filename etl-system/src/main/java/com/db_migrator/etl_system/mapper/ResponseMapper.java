@@ -1,21 +1,16 @@
 package com.db_migrator.etl_system.mapper;
 
-import com.db_migrator.etl_system.dto.response.ColumnMetadataResponse;
-import com.db_migrator.etl_system.dto.response.ConnectionTestResponse;
-import com.db_migrator.etl_system.dto.response.ConnectorResponse;
-import com.db_migrator.etl_system.dto.response.OrganizationResponse;
-import com.db_migrator.etl_system.dto.response.RelationMetadataResponse;
-import com.db_migrator.etl_system.dto.response.SystemScanDetailsResponse;
-import com.db_migrator.etl_system.dto.response.SystemScanResponse;
-import com.db_migrator.etl_system.dto.response.TableMetadataResponse;
-import com.db_migrator.etl_system.dto.response.UserResponse;
+import com.db_migrator.etl_system.dto.response.*;
 import com.db_migrator.etl_system.model.entity.connector.Connector;
 import com.db_migrator.etl_system.model.entity.metadata.ColumnMetadata;
 import com.db_migrator.etl_system.model.entity.metadata.RelationMetadata;
 import com.db_migrator.etl_system.model.entity.metadata.SystemScan;
 import com.db_migrator.etl_system.model.entity.metadata.TableMetadata;
+import com.db_migrator.etl_system.model.entity.transformation.*;
 import com.db_migrator.etl_system.model.entity.user.Organization;
 import com.db_migrator.etl_system.model.entity.user.User;
+import com.db_migrator.etl_system.model.enums.ColumnTransformationType;
+import com.db_migrator.etl_system.model.enums.TableTransformationType;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -155,6 +150,198 @@ public class ResponseMapper {
         response.setSuccess(success);
         response.setMessage(message);
         response.setDatabaseVersion(databaseVersion);
+        return response;
+    }
+
+    public TransformationModelResponse toTransformationModelResponse(TransformationModel model) {
+        TransformationModelResponse response = new TransformationModelResponse();
+        response.setId(model.getId());
+        response.setName(model.getName());
+        response.setSystemScanId(model.getSystemScan().getId());
+        response.setSystemScanName(model.getSystemScan().getName());
+        response.setTargetConnectorId(model.getTargetConnector().getId());
+        response.setTargetConnectorName(model.getTargetConnector().getName());
+        response.setTargetDatabaseType(model.getTargetConnector().getDatabaseType());
+        response.setCreatedById(model.getCreatedBy().getId());
+        response.setCreatedByName(model.getCreatedBy().getUsername());
+        response.setCreatedAt(model.getCreatedAt());
+
+        int tableCount = model.getTransformationTables() != null ? model.getTransformationTables().size() : 0;
+        int columnCount = 0;
+        if (model.getTransformationTables() != null) {
+            for (TransformationTable table : model.getTransformationTables()) {
+                if (table.getColumns() != null) {
+                    columnCount += table.getColumns().size();
+                }
+            }
+        }
+        response.setTableCount(tableCount);
+        response.setColumnCount(columnCount);
+
+        return response;
+    }
+
+    public TransformationModelDetailsResponse toTransformationModelDetailsResponse(TransformationModel model) {
+        TransformationModelDetailsResponse response = new TransformationModelDetailsResponse();
+        response.setId(model.getId());
+        response.setName(model.getName());
+        response.setSystemScanId(model.getSystemScan().getId());
+        response.setSystemScanName(model.getSystemScan().getName());
+        response.setTargetConnectorId(model.getTargetConnector().getId());
+        response.setTargetConnectorName(model.getTargetConnector().getName());
+        response.setTargetDatabaseType(model.getTargetConnector().getDatabaseType());
+        response.setCreatedById(model.getCreatedBy().getId());
+        response.setCreatedByName(model.getCreatedBy().getUsername());
+        response.setCreatedAt(model.getCreatedAt());
+
+        // Filter out soft-deleted tables
+        List<TransformationTable> activeTables = model.getTransformationTables() != null ?
+                model.getTransformationTables().stream()
+                        .filter(table -> !isTableDeleted(table))
+                        .collect(Collectors.toList()) : List.of();
+
+        int tableCount = activeTables.size();
+        int columnCount = 0;
+        for (TransformationTable table : activeTables) {
+            if (table.getColumns() != null) {
+                // Only count non-deleted columns
+                columnCount += table.getColumns().stream()
+                        .filter(column -> !isColumnDeleted(column))
+                        .count();
+            }
+        }
+        response.setTableCount(tableCount);
+        response.setColumnCount(columnCount);
+
+        List<TransformationTableResponse> tables = activeTables.stream()
+                .map(this::toTransformationTableResponse)
+                .collect(Collectors.toList());
+        response.setTables(tables);
+
+        // Filter out soft-deleted relations
+        List<TransformationRelationResponse> relations = model.getTransformationRelations() != null ?
+                model.getTransformationRelations().stream()
+                        .filter(relation -> !relation.getIsDeleted())
+                        .map(this::toTransformationRelationResponse)
+                        .collect(Collectors.toList()) : List.of();
+        response.setRelations(relations);
+
+        response.setWarnings(List.of());
+
+        return response;
+    }
+
+    /**
+     * Check if table has DELETE_TABLE transformation
+     */
+    private boolean isTableDeleted(TransformationTable table) {
+        if (table.getAssignments() == null) {
+            return false;
+        }
+        return table.getAssignments().stream()
+                .anyMatch(a -> a.getTransformationType() == TableTransformationType.DELETE_TABLE);
+    }
+
+    /**
+     * Check if column has DELETE_COLUMN transformation
+     */
+    private boolean isColumnDeleted(TransformationColumn column) {
+        if (column.getAssignments() == null) {
+            return false;
+        }
+        return column.getAssignments().stream()
+                .anyMatch(a -> a.getTransformationType() == ColumnTransformationType.DELETE_COLUMN);
+    }
+
+    public TransformationTableResponse toTransformationTableResponse(TransformationTable table) {
+        TransformationTableResponse response = new TransformationTableResponse();
+        response.setId(table.getId());
+        response.setSourceTableName(table.getSourceTableMetadata() != null ?
+                table.getSourceTableMetadata().getTableName() : null);
+        response.setSourceTableMetadataId(table.getSourceTableMetadata() != null ?
+                table.getSourceTableMetadata().getId() : null);
+
+        List<TableTransformationAssignmentResponse> tableTransformations = table.getAssignments() != null ?
+                table.getAssignments().stream()
+                        .map(this::toTableTransformationAssignmentResponse)
+                        .collect(Collectors.toList()) : List.of();
+        response.setTableTransformations(tableTransformations);
+
+        // Filter out soft-deleted columns
+        List<TransformationColumnResponse> columns = table.getColumns() != null ?
+                table.getColumns().stream()
+                        .filter(column -> !isColumnDeleted(column))
+                        .map(this::toTransformationColumnResponse)
+                        .collect(Collectors.toList()) : List.of();
+        response.setColumns(columns);
+
+        return response;
+    }
+
+    public TransformationColumnResponse toTransformationColumnResponse(TransformationColumn column) {
+        TransformationColumnResponse response = new TransformationColumnResponse();
+        response.setId(column.getId());
+        response.setSourceColumnName(column.getSourceColumnMetadata() != null ?
+                column.getSourceColumnMetadata().getColumnName() : null);
+        response.setSourceDataType(column.getSourceColumnMetadata() != null ?
+                column.getSourceColumnMetadata().getDataType() : null);
+        response.setSourceColumnMetadataId(column.getSourceColumnMetadata() != null ?
+                column.getSourceColumnMetadata().getId() : null);
+
+        List<ColumnTransformationAssignmentResponse> columnTransformations = column.getAssignments() != null ?
+                column.getAssignments().stream()
+                        .map(this::toColumnTransformationAssignmentResponse)
+                        .collect(Collectors.toList()) : List.of();
+        response.setColumnTransformations(columnTransformations);
+
+        return response;
+    }
+
+    public TableTransformationAssignmentResponse toTableTransformationAssignmentResponse(TableTransformationAssignment trans) {
+        TableTransformationAssignmentResponse response = new TableTransformationAssignmentResponse();
+        response.setId(trans.getId());
+        response.setTransformationType(trans.getTransformationType());
+
+        // RENAME_TABLE
+        response.setNewName(trans.getNewName());
+
+        // ADD_TABLE
+        response.setTableName(trans.getTableName());
+        response.setIdGenerationStrategy(trans.getIdGenerationStrategy());
+
+        return response;
+    }
+
+    public ColumnTransformationAssignmentResponse toColumnTransformationAssignmentResponse(ColumnTransformationAssignment trans) {
+        ColumnTransformationAssignmentResponse response = new ColumnTransformationAssignmentResponse();
+        response.setId(trans.getId());
+        response.setTransformationType(trans.getTransformationType());
+
+        // RENAME_COLUMN
+        response.setNewName(trans.getNewName());
+
+        // ADD_COLUMN
+        response.setColumnName(trans.getColumnName());
+        response.setDataType(trans.getDataType());
+        response.setIsNullable(trans.getIsNullable());
+        response.setIsPrimaryKey(trans.getIsPrimaryKey());
+
+        // CHANGE_TYPE
+        response.setTargetDataType(trans.getTargetDataType());
+
+        return response;
+    }
+
+    public TransformationRelationResponse toTransformationRelationResponse(TransformationRelation relation) {
+        TransformationRelationResponse response = new TransformationRelationResponse();
+        response.setId(relation.getId());
+        response.setSourceRelationMetadataId(relation.getSourceRelationMetadata() != null ?
+            relation.getSourceRelationMetadata().getId() : null);
+        response.setIsDeleted(relation.getIsDeleted());
+        response.setForeignTable(relation.getForeignTable());
+        response.setForeignColumn(relation.getForeignColumn());
+        response.setPrimaryTable(relation.getPrimaryTable());
+        response.setPrimaryColumn(relation.getPrimaryColumn());
         return response;
     }
 }
