@@ -18,4 +18,15 @@ public interface TransformationRelationRepository extends JpaRepository<Transfor
            "AND (tr.foreignTable = :tableName OR tr.primaryTable = :tableName) AND tr.isDeleted = false")
     List<TransformationRelation> findActiveRelationsByTable(@Param("modelId") Long modelId,
                                                              @Param("tableName") String tableName);
+
+    /**
+     * Find all relations where column appears in either side for a specific table
+     */
+    @Query("SELECT tr FROM TransformationRelation tr WHERE tr.transformationModel.id = :modelId " +
+           "AND ((tr.foreignTable = :tableName AND tr.foreignColumn = :columnName) " +
+           "OR (tr.primaryTable = :tableName AND tr.primaryColumn = :columnName)) " +
+           "AND tr.isDeleted = false")
+    List<TransformationRelation> findActiveRelationsByColumn(@Param("modelId") Long modelId,
+                                                              @Param("tableName") String tableName,
+                                                              @Param("columnName") String columnName);
 }

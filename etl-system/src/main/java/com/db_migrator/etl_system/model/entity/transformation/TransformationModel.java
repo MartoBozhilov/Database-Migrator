@@ -43,6 +43,9 @@ public class TransformationModel extends BaseEntity {
     @Column(name = "created_at")
     private Date createdAt = new Date();
 
+    @Column(name = "is_confirmed", nullable = false)
+    private Boolean isConfirmed = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "system_scan_id", nullable = false, updatable = false)
     private SystemScan systemScan;

@@ -33,7 +33,11 @@ public class TransformationColumn extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_column_metadata_id")
-    private ColumnMetadata sourceColumnMetadata;  // NULL for ADD_COLUMN
+    private ColumnMetadata sourceColumnMetadata;
+
+    // Resolved target database type
+    @Column(name = "resolved_target_type", length = 100)
+    private String resolvedTargetType;
 
     @OneToMany(mappedBy = "transformationColumn", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<ColumnTransformationAssignment> assignments = new ArrayList<>();

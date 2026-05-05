@@ -128,8 +128,8 @@ public class DataInitializer implements CommandLineRunner {
         migrationAdmin = userRepository.save(migrationAdmin);
 
         User operationUser = User.builder()
-                .username("connector_user")
-                .email("connector.user@test.com")
+                .username("operation_user")
+                .email("operation.user@test.com")
                 .password(passwordEncoder.encode("Test123!"))
                 .firstName("Operation")
                 .lastName("User")
@@ -141,7 +141,7 @@ public class DataInitializer implements CommandLineRunner {
         UserRole connectorRole = userRoleRepository.findByRole(UserRoleEnum.CONNECTOR_USER)
                 .orElseThrow(() -> new RuntimeException("CONNECTOR_USER role not found"));
         UserRole modelRole = userRoleRepository.findByRole(UserRoleEnum.TRANSFORMATION_MODEL_USER)
-                .orElseThrow(() -> new RuntimeException("CONNECTOR_USER role not found"));
+                .orElseThrow(() -> new RuntimeException("TRANSFORMATION_MODEL_USER role not found"));
         operationUser.getRoles().add(connectorRole);
         operationUser.getRoles().add(modelRole);
         operationUser = userRepository.save(operationUser);

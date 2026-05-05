@@ -79,6 +79,17 @@
     "LONGBLOB": [
       {"targetType": "varbinary(max)", "dataLossRisk": false}
     ],
+    "BINARY": [
+      {"targetType": "binary", "dataLossRisk": false},
+      {"targetType": "varbinary", "dataLossRisk": false}
+    ],
+    "VARBINARY": [
+      {"targetType": "varbinary", "dataLossRisk": false},
+      {"targetType": "varbinary(max)", "dataLossRisk": false}
+    ],
+    "BIT": [
+      {"targetType": "bit", "dataLossRisk": false}
+    ],
     "DATE": [
       {"targetType": "date", "dataLossRisk": false}
     ],

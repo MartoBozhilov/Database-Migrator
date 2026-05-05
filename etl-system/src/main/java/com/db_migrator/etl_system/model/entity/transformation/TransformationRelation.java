@@ -22,22 +22,13 @@ import lombok.Setter;
 @AllArgsConstructor
 public class TransformationRelation extends BaseEntity {
 
-    // Changes of relations (here we apply changes/updates on relations on assignments)
-    // ADD_RELATION -> creates new entry -> (sourceRelationMetadata == null)
-    // DELETE_RELATION ->  isDeleted flag
-
-    // RENAME_RELATION -> not user triggered (system (java logic) handled) when
-    // rename table or column that is in relationship
-    // example user_id is fk in table orders -> user rename user_id to system_user_id -> we should handle to
-    // update relation entity fk from user_id to system_user_id
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "transformation_model_id", nullable = false)
     private TransformationModel transformationModel;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_relation_metadata_id")
-    private RelationMetadata sourceRelationMetadata;  // NULL for ADD_RELATION
+    private RelationMetadata sourceRelationMetadata;
 
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;

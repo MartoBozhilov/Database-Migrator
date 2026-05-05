@@ -24,6 +24,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.db_migrator.etl_system.service.transformation.TransformationUtils.getEffectiveTableName;
+import static com.db_migrator.etl_system.service.transformation.TransformationUtils.isTableDeleted;
+import static com.db_migrator.etl_system.service.transformation.TransformationUtils.validateModelNotConfirmed;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +47,8 @@ public class TransformationTableService {
     private final SecurityUtils securityUtils;
     private final ResponseMapper responseMapper;
     private final EntityManager entityManager;
+    private final TypeResolutionService typeResolutionService;
+    private final TypeMappingLoader typeMappingLoader;
 
     @Transactional
     public TransformationModelDetailsResponse renameTable(Long modelId, Long tableId, String newName) {
@@ -50,6 +56,8 @@ public class TransformationTableService {
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
                 .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+
+        validateModelNotConfirmed(model);
 
         TransformationTable table = getTableAndValidateOwnership(tableId, modelId);
 
@@ -81,6 +89,8 @@ public class TransformationTableService {
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
                 .orElseThrow(() -> new RuntimeException("Transformation model not found"));
 
+        validateModelNotConfirmed(model);
+
         validateAddTableRequest(request, model);
 
         // Check for duplicate table name
@@ -101,6 +111,8 @@ public class TransformationTableService {
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
                 .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+
+        validateModelNotConfirmed(model);
 
         TransformationTable table = getTableAndValidateOwnership(tableId, modelId);
 
@@ -136,6 +148,20 @@ public class TransformationTableService {
         }
         sqlIdentifierValidator.validateIdentifier(request.getTableName(), model.getTargetConnector().getDatabaseType());
         sqlIdentifierValidator.validateIdentifier(request.getIdColumnName(), model.getTargetConnector().getDatabaseType());
+
+        // Validate ID column type is valid for target database
+        boolean isValidType = typeMappingLoader.isValidTargetType(
+                request.getIdColumnDataType(),
+                model.getTargetConnector().getDatabaseType()
+        );
+
+        if (!isValidType) {
+            throw new RuntimeException(
+                    String.format("Invalid data type '%s' for target database %s. Please use a valid type for this database.",
+                            request.getIdColumnDataType(),
+                            model.getTargetConnector().getDatabaseType())
+            );
+        }
     }
 
     private TransformationTable createNewTable(TransformationModel model, TableTransformationRequest request) {
@@ -143,27 +169,32 @@ public class TransformationTableService {
         TransformationTable table = new TransformationTable();
         table.setTransformationModel(model);
         table.setSourceTableMetadata(null);
-        table = tableRepository.save(table);
+        TransformationTable savedTable = tableRepository.save(table);
 
         // Create ADD_TABLE assignment
         TableTransformationAssignment assignment = new TableTransformationAssignment();
-        assignment.setTransformationTable(table);
+        assignment.setTransformationTable(savedTable);
         assignment.setTransformationType(TableTransformationType.ADD_TABLE);
         assignment.setTableName(request.getTableName());
         assignment.setIdGenerationStrategy(request.getIdGenerationStrategy());
         assignmentRepository.save(assignment);
 
-        return table;
+        return savedTable;
     }
 
-    private void createIdColumn(TransformationTable table, String idColumnName, String idColumnDataType) {
+    private TransformationColumn createIdColumn(TransformationTable table, String idColumnName, String idColumnDataType) {
         TransformationColumn idColumn = new TransformationColumn();
         idColumn.setTransformationTable(table);
         idColumn.setSourceColumnMetadata(null);
-        idColumn = columnRepository.save(idColumn);
+
+        // Resolve target type for ADD_COLUMN
+        String resolvedType = typeResolutionService.resolveAddColumnType(idColumnDataType);
+        idColumn.setResolvedTargetType(resolvedType);
+
+        TransformationColumn savedColumn = columnRepository.save(idColumn);
 
         ColumnTransformationAssignment columnAssignment = new ColumnTransformationAssignment();
-        columnAssignment.setTransformationColumn(idColumn);
+        columnAssignment.setTransformationColumn(savedColumn);
         columnAssignment.setTransformationType(ColumnTransformationType.ADD_COLUMN);
         columnAssignment.setColumnName(idColumnName);
         columnAssignment.setDataType(idColumnDataType);
@@ -172,6 +203,8 @@ public class TransformationTableService {
         columnAssignment.setDefaultValue(null);
 
         columnAssignmentRepository.save(columnAssignment);
+
+        return savedColumn;
     }
 
     private TransformationTable getTableAndValidateOwnership(Long tableId, Long modelId) {
@@ -200,31 +233,6 @@ public class TransformationTableService {
         assignment.setTransformationTable(table);
         assignment.setTransformationType(type);
         return assignment;
-    }
-
-    private String getEffectiveTableName(TransformationTable table) {
-        // Check if table has RENAME_TABLE assignment
-        Optional<TableTransformationAssignment> renameAssignment = table.getAssignments().stream()
-                .filter(a -> a.getTransformationType() == TableTransformationType.RENAME_TABLE)
-                .findFirst();
-
-        if (renameAssignment.isPresent() && renameAssignment.get().getNewName() != null) {
-            return renameAssignment.get().getNewName();
-        }
-
-        // Check if table was added by user (ADD_TABLE)
-        Optional<TableTransformationAssignment> addAssignment = table.getAssignments().stream()
-                .filter(a -> a.getTransformationType() == TableTransformationType.ADD_TABLE)
-                .findFirst();
-
-        if (addAssignment.isPresent() && addAssignment.get().getTableName() != null) {
-            return addAssignment.get().getTableName();
-        }
-
-        // Return original name from metadata
-        return table.getSourceTableMetadata() != null
-                ? table.getSourceTableMetadata().getTableName()
-                : null;
     }
 
     private void checkTableRelationships(Long modelId, String tableName) {
@@ -285,23 +293,29 @@ public class TransformationTableService {
         }
     }
 
-    private void updateRelationsForRenamedTable(Long modelId, String oldTableName, String newTableName) {
+    private List<TransformationRelation> updateRelationsForRenamedTable(Long modelId, String oldTableName, String newTableName) {
         // Find all relations involving the old table name
         List<TransformationRelation> relations = relationRepository.findActiveRelationsByTable(modelId, oldTableName);
 
-        for (TransformationRelation relation : relations) {
-            // Update foreign table name if it matches
-            if (relation.getForeignTable().equals(oldTableName)) {
-                relation.setForeignTable(newTableName);
-            }
+        return relations.stream()
+                .map(relation -> {
+                    boolean updated = false;
 
-            // Update primary table name if it matches
-            if (relation.getPrimaryTable().equals(oldTableName)) {
-                relation.setPrimaryTable(newTableName);
-            }
+                    // Update foreign table name if it matches
+                    if (relation.getForeignTable().equals(oldTableName)) {
+                        relation.setForeignTable(newTableName);
+                        updated = true;
+                    }
 
-            relationRepository.save(relation);
-        }
+                    // Update primary table name if it matches
+                    if (relation.getPrimaryTable().equals(oldTableName)) {
+                        relation.setPrimaryTable(newTableName);
+                        updated = true;
+                    }
+
+                    return updated ? relationRepository.save(relation) : relation;
+                })
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private void checkDuplicateTableName(String tableName, TransformationModel model, Long excludeTableId) {
@@ -314,9 +328,7 @@ public class TransformationTableService {
             }
 
             // Skip deleted tables
-            boolean isDeleted = table.getAssignments().stream()
-                    .anyMatch(a -> a.getTransformationType() == TableTransformationType.DELETE_TABLE);
-            if (isDeleted) {
+            if (isTableDeleted(table)) {
                 continue;
             }
 

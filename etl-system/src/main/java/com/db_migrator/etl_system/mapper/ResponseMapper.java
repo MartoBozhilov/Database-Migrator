@@ -9,12 +9,13 @@ import com.db_migrator.etl_system.model.entity.metadata.TableMetadata;
 import com.db_migrator.etl_system.model.entity.transformation.*;
 import com.db_migrator.etl_system.model.entity.user.Organization;
 import com.db_migrator.etl_system.model.entity.user.User;
-import com.db_migrator.etl_system.model.enums.ColumnTransformationType;
-import com.db_migrator.etl_system.model.enums.TableTransformationType;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.db_migrator.etl_system.service.transformation.TransformationUtils.isColumnDeleted;
+import static com.db_migrator.etl_system.service.transformation.TransformationUtils.isTableDeleted;
 
 @Component
 public class ResponseMapper {
@@ -157,6 +158,7 @@ public class ResponseMapper {
         TransformationModelResponse response = new TransformationModelResponse();
         response.setId(model.getId());
         response.setName(model.getName());
+        response.setIsConfirmed(model.getIsConfirmed());
         response.setSystemScanId(model.getSystemScan().getId());
         response.setSystemScanName(model.getSystemScan().getName());
         response.setTargetConnectorId(model.getTargetConnector().getId());
@@ -185,6 +187,7 @@ public class ResponseMapper {
         TransformationModelDetailsResponse response = new TransformationModelDetailsResponse();
         response.setId(model.getId());
         response.setName(model.getName());
+        response.setIsConfirmed(model.getIsConfirmed());
         response.setSystemScanId(model.getSystemScan().getId());
         response.setSystemScanName(model.getSystemScan().getName());
         response.setTargetConnectorId(model.getTargetConnector().getId());
@@ -198,14 +201,14 @@ public class ResponseMapper {
         List<TransformationTable> activeTables = model.getTransformationTables() != null ?
                 model.getTransformationTables().stream()
                         .filter(table -> !isTableDeleted(table))
-                        .collect(Collectors.toList()) : List.of();
+                        .toList() : List.of();
 
         int tableCount = activeTables.size();
         int columnCount = 0;
         for (TransformationTable table : activeTables) {
             if (table.getColumns() != null) {
                 // Only count non-deleted columns
-                columnCount += table.getColumns().stream()
+                columnCount += (int) table.getColumns().stream()
                         .filter(column -> !isColumnDeleted(column))
                         .count();
             }
@@ -229,28 +232,6 @@ public class ResponseMapper {
         response.setWarnings(List.of());
 
         return response;
-    }
-
-    /**
-     * Check if table has DELETE_TABLE transformation
-     */
-    private boolean isTableDeleted(TransformationTable table) {
-        if (table.getAssignments() == null) {
-            return false;
-        }
-        return table.getAssignments().stream()
-                .anyMatch(a -> a.getTransformationType() == TableTransformationType.DELETE_TABLE);
-    }
-
-    /**
-     * Check if column has DELETE_COLUMN transformation
-     */
-    private boolean isColumnDeleted(TransformationColumn column) {
-        if (column.getAssignments() == null) {
-            return false;
-        }
-        return column.getAssignments().stream()
-                .anyMatch(a -> a.getTransformationType() == ColumnTransformationType.DELETE_COLUMN);
     }
 
     public TransformationTableResponse toTransformationTableResponse(TransformationTable table) {
@@ -285,6 +266,7 @@ public class ResponseMapper {
                 column.getSourceColumnMetadata().getColumnName() : null);
         response.setSourceDataType(column.getSourceColumnMetadata() != null ?
                 column.getSourceColumnMetadata().getDataType() : null);
+        response.setResolvedTargetType(column.getResolvedTargetType());
         response.setSourceColumnMetadataId(column.getSourceColumnMetadata() != null ?
                 column.getSourceColumnMetadata().getId() : null);
 

@@ -1,5 +1,7 @@
 package com.db_migrator.etl_system.service;
 
+import static com.db_migrator.etl_system.service.transformation.TransformationUtils.validateModelNotConfirmed;
+
 import com.db_migrator.etl_system.dto.request.TransformationModelCreateRequest;
 import com.db_migrator.etl_system.dto.request.TransformationModelUpdateRequest;
 import com.db_migrator.etl_system.dto.response.TransformationModelDetailsResponse;
@@ -22,6 +24,8 @@ import com.db_migrator.etl_system.repository.ExecutionCycleRepository;
 import com.db_migrator.etl_system.repository.SystemScanRepository;
 import com.db_migrator.etl_system.repository.TransformationModelRepository;
 import com.db_migrator.etl_system.security.SecurityUtils;
+import com.db_migrator.etl_system.service.transformation.TypeResolutionService;
+import com.db_migrator.etl_system.service.transformation.validation.TransformationValidationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +44,8 @@ public class TransformationModelService {
     private final ExecutionCycleRepository cycleRepository;
     private final SecurityUtils securityUtils;
     private final ResponseMapper responseMapper;
+    private final TypeResolutionService typeResolutionService;
+    private final TransformationValidationService validationService;
 
     @Transactional
     public TransformationModelDetailsResponse create(TransformationModelCreateRequest request) {
@@ -70,6 +76,11 @@ public class TransformationModelService {
         TransformationModel model = buildTransformationModel(request.getName(), currentUser, scan, targetConnector);
 
         model = modelRepository.save(model);
+
+        // Auto-resolve column types for cross-database migrations
+        typeResolutionService.autoResolveAllColumnTypes(model);
+        model = modelRepository.save(model);
+
         return responseMapper.toTransformationModelDetailsResponse(model);
     }
 
@@ -97,16 +108,14 @@ public class TransformationModelService {
         return responseMapper.toTransformationModelDetailsResponse(model);
     }
 
-    /**
-     * UPDATE - Update transformation model name only
-     * Note: SystemScan and TargetConnector cannot be changed after creation
-     */
     @Transactional
     public TransformationModelDetailsResponse update(Long id, TransformationModelUpdateRequest request) {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
                 .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+
+        validateModelNotConfirmed(model);
 
         // Check name uniqueness (only if name is different)
         if (!request.getName().equals(model.getName())) {
@@ -132,6 +141,31 @@ public class TransformationModelService {
         }
 
         modelRepository.delete(model);
+    }
+
+    @Transactional
+    public TransformationModelDetailsResponse confirmModel(Long id) {
+        Long orgId = securityUtils.getCurrentOrganizationId();
+
+        TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+
+        if (model.getIsConfirmed()) {
+            throw new RuntimeException("Transformation model is already confirmed");
+        }
+
+        // Validate model (DAG check)
+        List<String> validationErrors = validationService.validateForConfirmation(model);
+
+        if (!validationErrors.isEmpty()) {
+            String errorMessage = "Transformation model validation failed:\n" + String.join("\n", validationErrors);
+            throw new RuntimeException(errorMessage);
+        }
+
+        model.setIsConfirmed(true);
+        modelRepository.save(model);
+
+        return responseMapper.toTransformationModelDetailsResponse(model);
     }
 
     private TransformationModel buildTransformationModel(String name, User currentUser, SystemScan scan, Connector targetConnector) {

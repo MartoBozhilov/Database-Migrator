@@ -70,6 +70,12 @@
     "BOOLEAN": [
       {"targetType": "bit", "dataLossRisk": false}
     ],
+    "BIT": [
+      {"targetType": "bit", "dataLossRisk": false}
+    ],
+    "BIT VARYING": [
+      {"targetType": "varbinary", "dataLossRisk": false}
+    ],
     "JSON": [
       {"targetType": "nvarchar(max)", "dataLossRisk": false, "warning": "JSON stored as text, no native JSON support"}
     ],
@@ -81,10 +87,10 @@
       {"targetType": "varchar(36)", "dataLossRisk": false}
     ],
     "SERIAL": [
-      {"targetType": "int identity", "dataLossRisk": false}
+      {"targetType": "int", "dataLossRisk": false}
     ],
     "BIGSERIAL": [
-      {"targetType": "bigint identity", "dataLossRisk": false}
+      {"targetType": "bigint", "dataLossRisk": false}
     ]
   }
 }

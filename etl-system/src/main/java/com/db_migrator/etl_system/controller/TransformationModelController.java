@@ -74,4 +74,11 @@ public class TransformationModelController {
         modelService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/confirm")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MIGRATION_ADMIN', 'TRANSFORMATION_MODEL_USER')")
+    public ResponseEntity<TransformationModelDetailsResponse> confirmModel(@PathVariable Long id) {
+        TransformationModelDetailsResponse response = modelService.confirmModel(id);
+        return ResponseEntity.ok(response);
+    }
 }

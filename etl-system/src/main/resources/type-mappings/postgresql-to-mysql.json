@@ -69,6 +69,12 @@
       {"targetType": "tinyint(1)", "dataLossRisk": false},
       {"targetType": "boolean", "dataLossRisk": false}
     ],
+    "BIT": [
+      {"targetType": "bit", "dataLossRisk": false}
+    ],
+    "BIT VARYING": [
+      {"targetType": "varbinary", "dataLossRisk": false}
+    ],
     "JSON": [
       {"targetType": "json", "dataLossRisk": false},
       {"targetType": "longtext", "dataLossRisk": false}
@@ -82,10 +88,10 @@
       {"targetType": "varchar(36)", "dataLossRisk": false}
     ],
     "SERIAL": [
-      {"targetType": "int auto_increment", "dataLossRisk": false}
+      {"targetType": "int", "dataLossRisk": false}
     ],
     "BIGSERIAL": [
-      {"targetType": "bigint auto_increment", "dataLossRisk": false}
+      {"targetType": "bigint", "dataLossRisk": false}
     ]
   }
 }

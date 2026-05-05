@@ -59,6 +59,9 @@
     "VARBINARY(MAX)": [
       {"targetType": "bytea", "dataLossRisk": false}
     ],
+    "BINARY": [
+      {"targetType": "bytea", "dataLossRisk": false}
+    ],
     "IMAGE": [
       {"targetType": "bytea", "dataLossRisk": false}
     ],

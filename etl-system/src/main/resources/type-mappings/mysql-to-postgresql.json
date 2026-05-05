@@ -99,6 +99,16 @@
     "TINYINT(1)": [
       {"targetType": "boolean", "dataLossRisk": false}
     ],
+    "BIT": [
+      {"targetType": "bit varying", "dataLossRisk": false},
+      {"targetType": "boolean", "dataLossRisk": false}
+    ],
+    "BINARY": [
+      {"targetType": "bytea", "dataLossRisk": false}
+    ],
+    "VARBINARY": [
+      {"targetType": "bytea", "dataLossRisk": false}
+    ],
     "JSON": [
       {"targetType": "json", "dataLossRisk": false},
       {"targetType": "jsonb", "dataLossRisk": false}

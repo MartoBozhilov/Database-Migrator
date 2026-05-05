@@ -16,8 +16,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Date;
-
 @Entity
 @Getter
 @Setter
@@ -33,8 +31,6 @@ public class ColumnTransformationAssignment extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "transformation_type", nullable = false, length = 50)
     private ColumnTransformationType transformationType;
-
-    // ===== TRANSFORMATION PARAMETERS =====
 
     // For RENAME_COLUMN
     @Column(name = "new_name", length = 64)

@@ -15,6 +15,7 @@ import java.util.Date;
 public class TransformationModelResponse {
     private Long id;
     private String name;
+    private Boolean isConfirmed;
     private Long systemScanId;
     private String systemScanName;
     private Long targetConnectorId;
