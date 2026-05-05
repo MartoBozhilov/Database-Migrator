@@ -1,0 +1,22 @@
+{
+  "databaseType": "MSSQL",
+  "identifierQuote": {
+    "start": "[",
+    "end": "]"
+  },
+  "autoIncrement": {
+    "integer": "{dataType} IDENTITY(1,1)",
+    "bigint": "{dataType} IDENTITY(1,1)"
+  },
+  "pagination": {
+    "type": "OFFSET_FETCH",
+    "template": "ORDER BY {orderBy} OFFSET {offset} ROWS FETCH NEXT {limit} ROWS ONLY",
+    "requiresOrderBy": true
+  },
+  "defaultFunctions": {
+    "CURRENT_TIMESTAMP": "GETDATE()",
+    "UUID": "NEWID()",
+    "CURRENT_DATE": "CAST(GETDATE() AS DATE)",
+    "CURRENT_TIME": "CAST(GETDATE() AS TIME)"
+  }
+}

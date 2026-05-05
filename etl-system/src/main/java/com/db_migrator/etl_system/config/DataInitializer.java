@@ -142,8 +142,11 @@ public class DataInitializer implements CommandLineRunner {
                 .orElseThrow(() -> new RuntimeException("CONNECTOR_USER role not found"));
         UserRole modelRole = userRoleRepository.findByRole(UserRoleEnum.TRANSFORMATION_MODEL_USER)
                 .orElseThrow(() -> new RuntimeException("TRANSFORMATION_MODEL_USER role not found"));
+        UserRole cycleRole = userRoleRepository.findByRole(UserRoleEnum.CYCLE_EXECUTION_USER)
+                .orElseThrow(() -> new RuntimeException("CYCLE_EXECUTION_USER role not found"));
         operationUser.getRoles().add(connectorRole);
         operationUser.getRoles().add(modelRole);
+        operationUser.getRoles().add(cycleRole);
         operationUser = userRepository.save(operationUser);
 
         log.info("========================================");

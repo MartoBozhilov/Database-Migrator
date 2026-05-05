@@ -5,17 +5,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Date;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ColumnMetadataResponse {
+public class TaskLogResponse {
 
     private Long id;
-    private String columnName;
-    private String dataType;
-    private Boolean isNullable;
-    private Integer length;
-    private Boolean isPrimaryKey;
-    private Boolean isAutoIncrement;
+    private String logLevel;
+    private String message;
+    private Date createdAt;
 }

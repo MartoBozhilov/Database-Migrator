@@ -157,7 +157,20 @@ public class TypeResolutionService {
 
         // Fallback to source type (same-db, no transformation)
         if (column.getSourceColumnMetadata() != null) {
-            return column.getSourceColumnMetadata().getDataType();
+            String dataType = column.getSourceColumnMetadata().getDataType();
+
+            // Quick fix: If VARCHAR/CHAR without length, add default length
+            if (dataType.equalsIgnoreCase("varchar") || dataType.equalsIgnoreCase("char")) {
+                return dataType + "(255)";
+            }
+            if (dataType.toLowerCase().startsWith("varchar") && !dataType.contains("(")) {
+                return "varchar(255)";
+            }
+            if (dataType.toLowerCase().startsWith("char") && !dataType.contains("(")) {
+                return "char(255)";
+            }
+
+            return dataType;
         }
 
         // ADD_COLUMN without resolved type (shouldn't happen)

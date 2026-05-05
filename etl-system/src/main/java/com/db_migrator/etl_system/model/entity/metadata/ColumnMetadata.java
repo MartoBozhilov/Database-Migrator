@@ -37,4 +37,10 @@ public class ColumnMetadata extends BaseEntity {
 
     @Column(name = "length", updatable = false)
     private Integer length;
+
+    @Column(name = "is_primary_key", nullable = false, updatable = false)
+    private Boolean isPrimaryKey;
+
+    @Column(name = "is_auto_increment", nullable = false, updatable = false)
+    private Boolean isAutoIncrement;
 }

@@ -24,14 +24,16 @@ import com.db_migrator.etl_system.repository.ExecutionCycleRepository;
 import com.db_migrator.etl_system.repository.SystemScanRepository;
 import com.db_migrator.etl_system.repository.TransformationModelRepository;
 import com.db_migrator.etl_system.security.SecurityUtils;
+import com.db_migrator.etl_system.service.execution.DAGBuilder;
 import com.db_migrator.etl_system.service.transformation.TypeResolutionService;
-import com.db_migrator.etl_system.service.transformation.validation.TransformationValidationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,7 +47,7 @@ public class TransformationModelService {
     private final SecurityUtils securityUtils;
     private final ResponseMapper responseMapper;
     private final TypeResolutionService typeResolutionService;
-    private final TransformationValidationService validationService;
+    private final DAGBuilder dagBuilder;
 
     @Transactional
     public TransformationModelDetailsResponse create(TransformationModelCreateRequest request) {
@@ -155,7 +157,7 @@ public class TransformationModelService {
         }
 
         // Validate model (DAG check)
-        List<String> validationErrors = validationService.validateForConfirmation(model);
+        List<String> validationErrors = validateModelForConfirmation(model);
 
         if (!validationErrors.isEmpty()) {
             String errorMessage = "Transformation model validation failed:\n" + String.join("\n", validationErrors);
@@ -166,6 +168,18 @@ public class TransformationModelService {
         modelRepository.save(model);
 
         return responseMapper.toTransformationModelDetailsResponse(model);
+    }
+
+    private List<String> validateModelForConfirmation(TransformationModel model) {
+        // Build dependency graph
+        Map<String, Set<String>> graph = dagBuilder.buildDependencyGraph(model);
+
+        // Find cycle paths
+        List<String> cyclePaths = dagBuilder.findCyclePaths(graph);
+
+        return cyclePaths.stream()
+                .map(cyclePath -> "Cycle detected in relationships: " + cyclePath)
+                .collect(Collectors.toList());
     }
 
     private TransformationModel buildTransformationModel(String name, User currentUser, SystemScan scan, Connector targetConnector) {

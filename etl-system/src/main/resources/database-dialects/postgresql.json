@@ -1,0 +1,22 @@
+{
+  "databaseType": "POSTGRESQL",
+  "identifierQuote": {
+    "start": "\"",
+    "end": "\""
+  },
+  "autoIncrement": {
+    "integer": "SERIAL",
+    "bigint": "BIGSERIAL"
+  },
+  "pagination": {
+    "type": "LIMIT_OFFSET",
+    "template": "LIMIT {limit} OFFSET {offset}",
+    "requiresOrderBy": false
+  },
+  "defaultFunctions": {
+    "CURRENT_TIMESTAMP": "CURRENT_TIMESTAMP",
+    "UUID": "gen_random_uuid()",
+    "CURRENT_DATE": "CURRENT_DATE",
+    "CURRENT_TIME": "CURRENT_TIME"
+  }
+}

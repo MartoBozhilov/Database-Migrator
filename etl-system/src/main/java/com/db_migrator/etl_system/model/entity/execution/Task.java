@@ -1,6 +1,7 @@
 package com.db_migrator.etl_system.model.entity.execution;
 
 import com.db_migrator.etl_system.model.entity.BaseEntity;
+import com.db_migrator.etl_system.model.entity.transformation.TransformationTable;
 import com.db_migrator.etl_system.model.enums.TaskStatusEnum;
 
 import jakarta.persistence.CascadeType;
@@ -38,15 +39,13 @@ public class Task extends BaseEntity {
     @JoinColumn(name = "cycle_id", nullable = false)
     private Cycle cycle;
 
-    @Column(name = "table_name", nullable = false)
-    private String tableName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "transformation_table_id", nullable = false)
+    private TransformationTable transformationTable;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private TaskStatusEnum status = TaskStatusEnum.PENDING;
-
-    @Column(name = "execution_order")
-    private Integer executionOrder;
 
     @Column(name = "started_at")
     private Date startedAt;

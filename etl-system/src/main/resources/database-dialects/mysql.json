@@ -1,0 +1,22 @@
+{
+  "databaseType": "MYSQL",
+  "identifierQuote": {
+    "start": "`",
+    "end": "`"
+  },
+  "autoIncrement": {
+    "integer": "{dataType} AUTO_INCREMENT",
+    "bigint": "{dataType} AUTO_INCREMENT"
+  },
+  "pagination": {
+    "type": "LIMIT_OFFSET",
+    "template": "LIMIT {limit} OFFSET {offset}",
+    "requiresOrderBy": false
+  },
+  "defaultFunctions": {
+    "CURRENT_TIMESTAMP": "CURRENT_TIMESTAMP",
+    "UUID": "UUID()",
+    "CURRENT_DATE": "CURDATE()",
+    "CURRENT_TIME": "CURTIME()"
+  }
+}

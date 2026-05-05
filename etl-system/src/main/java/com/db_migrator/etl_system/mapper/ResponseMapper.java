@@ -133,6 +133,8 @@ public class ResponseMapper {
         response.setDataType(column.getDataType());
         response.setIsNullable(column.getIsNullable());
         response.setLength(column.getLength());
+        response.setIsPrimaryKey(column.getIsPrimaryKey());
+        response.setIsAutoIncrement(column.getIsAutoIncrement());
         return response;
     }
 
@@ -326,4 +328,94 @@ public class ResponseMapper {
         response.setPrimaryColumn(relation.getPrimaryColumn());
         return response;
     }
+
+    // ===== Cycle Mapping Methods =====
+
+    public CycleResponse toCycleResponse(com.db_migrator.etl_system.model.entity.execution.Cycle cycle) {
+        CycleResponse response = new CycleResponse();
+        response.setId(cycle.getId());
+        response.setName(cycle.getName());
+        response.setTransformationModelId(cycle.getTransformationModel().getId());
+        response.setTransformationModelName(cycle.getTransformationModel().getName());
+        response.setStatus(cycle.getStatus());
+        response.setCreatedAt(cycle.getCreatedAt());
+        response.setStartedAt(cycle.getStartedAt());
+        response.setCompletedAt(cycle.getCompletedAt());
+        response.setErrorMessage(cycle.getErrorMessage());
+        response.setCreatedById(cycle.getCreatedBy().getId());
+        response.setCreatedByName(cycle.getCreatedBy().getUsername());
+
+        // Count tasks by status
+        if (cycle.getTasks() != null) {
+            response.setTotalTasks(cycle.getTasks().size());
+            response.setCompletedTasks((int) cycle.getTasks().stream()
+                .filter(t -> t.getStatus() == com.db_migrator.etl_system.model.enums.TaskStatusEnum.COMPLETED)
+                .count());
+            response.setFailedTasks((int) cycle.getTasks().stream()
+                .filter(t -> t.getStatus() == com.db_migrator.etl_system.model.enums.TaskStatusEnum.FAILED)
+                .count());
+        }
+
+        return response;
+    }
+
+    public CycleDetailsResponse toCycleDetailsResponse(com.db_migrator.etl_system.model.entity.execution.Cycle cycle) {
+        CycleDetailsResponse response = new CycleDetailsResponse();
+        response.setId(cycle.getId());
+        response.setName(cycle.getName());
+        response.setTransformationModelId(cycle.getTransformationModel().getId());
+        response.setTransformationModelName(cycle.getTransformationModel().getName());
+        response.setStatus(cycle.getStatus());
+        response.setCreatedAt(cycle.getCreatedAt());
+        response.setStartedAt(cycle.getStartedAt());
+        response.setCompletedAt(cycle.getCompletedAt());
+        response.setErrorMessage(cycle.getErrorMessage());
+        response.setCreatedById(cycle.getCreatedBy().getId());
+        response.setCreatedByName(cycle.getCreatedBy().getUsername());
+
+        // Count tasks by status
+        if (cycle.getTasks() != null) {
+            response.setTotalTasks(cycle.getTasks().size());
+            response.setCompletedTasks((int) cycle.getTasks().stream()
+                .filter(t -> t.getStatus() == com.db_migrator.etl_system.model.enums.TaskStatusEnum.COMPLETED)
+                .count());
+            response.setFailedTasks((int) cycle.getTasks().stream()
+                .filter(t -> t.getStatus() == com.db_migrator.etl_system.model.enums.TaskStatusEnum.FAILED)
+                .count());
+
+            // Map tasks
+            response.setTasks(cycle.getTasks().stream()
+                .map(this::toTaskResponse)
+                .collect(Collectors.toList()));
+        }
+
+        return response;
+    }
+
+    public TaskResponse toTaskResponse(com.db_migrator.etl_system.model.entity.execution.Task task) {
+        TaskResponse response = new TaskResponse();
+        response.setId(task.getId());
+
+        // Derive table name from TransformationTable
+        String tableName = com.db_migrator.etl_system.service.transformation.TransformationUtils
+            .getEffectiveTableName(task.getTransformationTable());
+        response.setTableName(tableName);
+
+        response.setStatus(task.getStatus());
+        response.setStartedAt(task.getStartedAt());
+        response.setCompletedAt(task.getCompletedAt());
+        response.setErrorMessage(task.getErrorMessage());
+        response.setRowsProcessed(task.getRowsProcessed());
+
+        // Map dependencies (table names)
+        if (task.getDependencies() != null) {
+            response.setDependsOn(task.getDependencies().stream()
+                .map(depTask -> com.db_migrator.etl_system.service.transformation.TransformationUtils
+                    .getEffectiveTableName(depTask.getTransformationTable()))
+                .collect(Collectors.toList()));
+        }
+
+        return response;
+    }
 }
+

@@ -39,7 +39,7 @@ public class MetadataExtractionService {
     private final RelationMetadataRepository relationRepository;
     private final MetadataQueryLoader queryLoader;
 
-    @Async("taskExecutor")
+    @Async("metadataExtractionTaskExecutor")
     @Transactional
     public void extractMetadataAsync(Long scanId) {
         log.info("Starting metadata extraction for scan ID: {}", scanId);
@@ -153,13 +153,15 @@ public class MetadataExtractionService {
         Map<String, TableMetadata> tablesMap = new HashMap<>();
         Map<String, List<ColumnMetadata>> columnsMap = new HashMap<>();
 
-        ResultSet resultSet = executeQuery(connection, queryConfig.getTablesAndColumnsQuery(), schemaOrDatabase);
+        ResultSet resultSet = executeTablesQuery(connection, queryConfig.getTablesAndColumnsQuery(),
+                schemaOrDatabase, scan.getSourceConnector().getDatabaseType().name());
 
         while (resultSet.next()) {
             String tableName = resultSet.getString("table_name");
 
             TableMetadata table = getOrCreateTable(tablesMap, columnsMap, scan, tableName);
-            ColumnMetadata column = buildColumnFromResultSet(resultSet, table);
+            ColumnMetadata column = buildColumnFromResultSet(resultSet, table,
+                    scan.getSourceConnector().getDatabaseType().name());
 
             columnsMap.get(tableName).add(column);
         }
@@ -206,7 +208,7 @@ public class MetadataExtractionService {
         return table;
     }
 
-    private ColumnMetadata buildColumnFromResultSet(ResultSet rs, TableMetadata table) throws SQLException {
+    private ColumnMetadata buildColumnFromResultSet(ResultSet rs, TableMetadata table, String dbType) throws SQLException {
         String columnName = rs.getString("column_name");
         String dataType = rs.getString("data_type");
         String isNullable = rs.getString("is_nullable");
@@ -214,12 +216,33 @@ public class MetadataExtractionService {
                 ? rs.getInt("character_maximum_length")
                 : null;
 
+        // Extract primary key info
+        String columnKey = rs.getString("column_key");
+        boolean isPrimaryKey = "PRI".equalsIgnoreCase(columnKey);
+
+        // Extract auto-increment info (database-specific)
+        boolean isAutoIncrement = false;
+        if ("MYSQL".equalsIgnoreCase(dbType)) {
+            String extra = rs.getString("extra");
+            isAutoIncrement = extra != null && extra.toLowerCase().contains("auto_increment");
+        } else if ("POSTGRESQL".equalsIgnoreCase(dbType)) {
+            String columnDefault = rs.getString("column_default");
+            isAutoIncrement = columnDefault != null &&
+                    (columnDefault.startsWith("nextval") || dataType.equalsIgnoreCase("serial") ||
+                            dataType.equalsIgnoreCase("bigserial"));
+        } else if ("MSSQL".equalsIgnoreCase(dbType)) {
+            int isIdentity = rs.getInt("is_identity");
+            isAutoIncrement = isIdentity == 1;
+        }
+
         return ColumnMetadata.builder()
                 .table(table)
                 .columnName(columnName)
                 .dataType(dataType)
                 .isNullable("YES".equalsIgnoreCase(isNullable))
                 .length(maxLength)
+                .isPrimaryKey(isPrimaryKey)
+                .isAutoIncrement(isAutoIncrement)
                 .build();
     }
 
@@ -247,6 +270,26 @@ public class MetadataExtractionService {
     private ResultSet executeQuery(Connection connection, String query, String schemaOrDatabase) throws SQLException {
         PreparedStatement stmt = connection.prepareStatement(query);
         stmt.setString(1, schemaOrDatabase);
+        return stmt.executeQuery();
+    }
+
+    private ResultSet executeTablesQuery(Connection connection, String query, String schemaOrDatabase, String dbType)
+            throws SQLException {
+        PreparedStatement stmt = connection.prepareStatement(query);
+
+        // PostgreSQL query requires schema parameter twice (for PK subquery and main query)
+        if ("POSTGRESQL".equalsIgnoreCase(dbType)) {
+            stmt.setString(1, schemaOrDatabase);
+            stmt.setString(2, schemaOrDatabase);
+        } else if ("MSSQL".equalsIgnoreCase(dbType)) {
+            // MSSQL query requires schema parameter twice (for PK subquery and main query)
+            stmt.setString(1, schemaOrDatabase);
+            stmt.setString(2, schemaOrDatabase);
+        } else {
+            // MySQL only needs one parameter
+            stmt.setString(1, schemaOrDatabase);
+        }
+
         return stmt.executeQuery();
     }
 }
