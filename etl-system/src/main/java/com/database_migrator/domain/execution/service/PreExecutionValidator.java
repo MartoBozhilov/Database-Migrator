@@ -10,12 +10,12 @@ import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
 import com.database_migrator.domain.scan.model.ScanStatusEnum;
 import com.database_migrator.config.database.MetadataQueryLoader;
 import com.database_migrator.domain.common.util.TransformationUtils;
+import com.database_migrator.domain.common.util.DatabaseConnectionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -40,10 +40,8 @@ public class PreExecutionValidator {
 
     private final DAGBuilder dagBuilder;
     private final MetadataQueryLoader metadataQueryLoader;
+    private final DatabaseConnectionManager connectionManager;
 
-    /**
-     * Validate cycle readiness before execution
-     */
     public ValidationResult validateCycle(Cycle cycle) {
         ValidationResult result = new ValidationResult(true);
 
@@ -90,7 +88,6 @@ public class PreExecutionValidator {
         ValidationResult result = new ValidationResult(true);
 
         try {
-            // Build dependency graph
             Map<String, Set<String>> graph = dagBuilder.buildDependencyGraph(model);
 
             // Check for cycles
@@ -111,17 +108,12 @@ public class PreExecutionValidator {
         ValidationResult result = new ValidationResult(true);
 
         try {
-            String jdbcUrl = buildJdbcUrl(connector);
+            Connection conn = connectionManager.createConnection(connector);
 
-            try (Connection conn = DriverManager.getConnection(
-                    jdbcUrl,
-                    connector.getUsername(),
-                    connector.getPassword())) {
+            connectionManager.closeQuietly(conn);
 
-                // Connection successful
-                log.info("{} database connection successful: {}", label, connector.getName());
+            log.info("{} database connection successful: {}", label, connector.getName());
 
-            }
         } catch (Exception e) {
             result.addError(label + " database connection failed: " + e.getMessage());
             log.error("{} database connection failed for connector {}: {}",
@@ -135,14 +127,9 @@ public class PreExecutionValidator {
         ValidationResult result = new ValidationResult(true);
 
         try {
-            String jdbcUrl = buildJdbcUrl(targetConnector);
+            Connection conn = connectionManager.createConnection(targetConnector);
 
-            try (Connection conn = DriverManager.getConnection(
-                    jdbcUrl,
-                    targetConnector.getUsername(),
-                    targetConnector.getPassword())) {
-
-                // Get list of tables that will be created
+            try {
                 Set<String> tablesToCreate = getIncludedTableNames(model);
 
                 // Check if any of these tables already exist in target
@@ -160,7 +147,10 @@ public class PreExecutionValidator {
                             ". Target database must be empty before migration.");
                 }
 
+            } finally {
+                connectionManager.closeQuietly(conn);
             }
+
         } catch (Exception e) {
             result.addError("Failed to check target schema: " + e.getMessage());
             log.error("Failed to validate target schema for connector {}: {}",
@@ -168,14 +158,6 @@ public class PreExecutionValidator {
         }
 
         return result;
-    }
-
-    private String buildJdbcUrl(Connector connector) {
-        return String.format("jdbc:%s://%s:%d/%s",
-                connector.getDatabaseType().name().toLowerCase(),
-                connector.getHost(),
-                connector.getPort(),
-                connector.getDatabaseName());
     }
 
     private boolean tableExists(Connection conn, String tableName, DatabaseTypeEnum dbType) {

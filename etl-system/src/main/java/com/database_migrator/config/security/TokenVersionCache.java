@@ -23,9 +23,6 @@ public class TokenVersionCache {
             .recordStats()
             .build();
 
-    /**
-     * Get token version for user. Checks cache first, then database if not found.
-     */
     public Long getTokenVersion(String email) {
         Long cachedVersion = cache.getIfPresent(email);
 

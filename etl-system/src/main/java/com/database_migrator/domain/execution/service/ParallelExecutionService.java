@@ -18,19 +18,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Parallel Execution Service using BTC Pattern
- * Executes task batches in parallel using ExecutorService:
- * 1. Fixed thread pool (10 threads)
- * 2. Tasks in same batch run in PARALLEL
- * 3. Wait for entire batch to complete before next batch (Future.get() synchronization)
- * 4. Stop execution on batch failure (fail fast)
- * Benefits:
- * - Automatic thread management
- * - Parallel execution within batch
- * - Sequential batch execution
- * - Exception handling with Future
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -38,13 +25,6 @@ public class ParallelExecutionService {
 
     private static final int THREAD_POOL_SIZE = 10;
 
-    /**
-     * Execute task batches in parallel
-     *
-     * @param taskBatches  Ordered batches (FIFO)
-     * @param cycle        Execution cycle
-     * @param taskExecutor Task executor service
-     */
     public void executeBatches(Deque<List<Task>> taskBatches, Cycle cycle, TaskExecutor taskExecutor) {
         ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
@@ -86,7 +66,7 @@ public class ParallelExecutionService {
                                     cycle.getId(), taskId, tableName, e.getMessage(), e);
 
                             // Re-throw to fail the Future
-                            throw new RuntimeException("Task execution failed", e);
+                            throw new com.database_migrator.domain.common.exception.ExecutionException("Task execution failed", e);
                         }
                     }));
                 }
@@ -140,9 +120,6 @@ public class ParallelExecutionService {
         }
     }
 
-    /**
-     * Cancel remaining tasks in queue
-     */
     private void cancelRemainingTasks(Deque<List<Task>> remainingBatches) {
         int cancelledCount = 0;
 

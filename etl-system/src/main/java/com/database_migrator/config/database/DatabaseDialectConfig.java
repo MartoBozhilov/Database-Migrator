@@ -16,7 +16,7 @@ public class DatabaseDialectConfig {
 
     private DatabaseTypeEnum databaseType;
     private IdentifierQuote identifierQuote;
-    private Map<String, String> autoIncrement;    // "integer" -> "SERIAL" or "{dataType} AUTO_INCREMENT"
+    private Map<String, String> autoIncrement;
     private PaginationConfig pagination;
-    private Map<String, String> defaultFunctions; // "CURRENT_TIMESTAMP" -> "GETDATE()"
+    private Map<String, String> defaultFunctions;
 }

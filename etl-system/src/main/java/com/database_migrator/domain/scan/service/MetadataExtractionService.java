@@ -12,6 +12,9 @@ import com.database_migrator.domain.scan.repository.RelationMetadataRepository;
 import com.database_migrator.domain.scan.repository.SystemScanRepository;
 import com.database_migrator.domain.scan.repository.TableMetadataRepository;
 import com.database_migrator.config.database.MetadataQueryLoader;
+import com.database_migrator.domain.common.util.DatabaseConnectionManager;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
+import com.database_migrator.domain.common.exception.ExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -19,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -39,6 +41,7 @@ public class MetadataExtractionService {
     private final ColumnMetadataRepository columnRepository;
     private final RelationMetadataRepository relationRepository;
     private final MetadataQueryLoader queryLoader;
+    private final DatabaseConnectionManager connectionManager;
 
     @Async("metadataExtractionTaskExecutor")
     @Transactional
@@ -47,17 +50,16 @@ public class MetadataExtractionService {
 
         try {
             SystemScan scan = scanRepository.findById(scanId)
-                    .orElseThrow(() -> new RuntimeException("Scan not found with ID: " + scanId));
+                    .orElseThrow(() -> new ResourceNotFoundException("SystemScan", scanId));
 
             Connector connector = scan.getSourceConnector();
-            String jdbcUrl = buildJdbcUrl(connector);
             String schemaOrDatabase = getSchemaOrDatabase(connector);
 
             updateScanStatus(scanId, ScanStatusEnum.RUNNING, new Date(), null, null);
 
-            try (Connection connection = DriverManager.getConnection(
-                    jdbcUrl, connector.getUsername(), connector.getPassword())) {
+            Connection connection = connectionManager.createConnection(connector);
 
+            try {
                 MetadataQueryConfig queryConfig = queryLoader.getQueryConfig(connector.getDatabaseType());
 
                 Map<String, TableMetadata> tablesMap = extractTablesAndColumns(
@@ -75,7 +77,9 @@ public class MetadataExtractionService {
             } catch (SQLException e) {
                 log.error("SQL error during metadata extraction for scan ID: {}", scanId, e);
                 updateScanStatus(scanId, ScanStatusEnum.FAILED, null, new Date(), e.getMessage());
-                throw new RuntimeException("Metadata extraction failed", e);
+                throw new ExecutionException("Metadata extraction failed", e);
+            } finally {
+                connectionManager.closeQuietly(connection);
             }
 
         } catch (Exception e) {
@@ -87,21 +91,20 @@ public class MetadataExtractionService {
     public Map<String, String> testConnection(Connector connector) {
         Map<String, String> result = new HashMap<>();
         try {
-            String jdbcUrl = buildJdbcUrl(connector);
-            Connection connection = DriverManager.getConnection(
-                    jdbcUrl,
-                    connector.getUsername(),
-                    connector.getPassword()
-            );
+            Connection connection = connectionManager.createConnection(connector);
 
-            java.sql.DatabaseMetaData metaData = connection.getMetaData();
-            String databaseVersion = metaData.getDatabaseProductName() + " " + metaData.getDatabaseProductVersion();
+            try {
+                java.sql.DatabaseMetaData metaData = connection.getMetaData();
+                String databaseVersion = metaData.getDatabaseProductName() + " " + metaData.getDatabaseProductVersion();
 
-            connection.close();
+                result.put("success", "true");
+                result.put("message", "Connection successful");
+                result.put("databaseVersion", databaseVersion);
 
-            result.put("success", "true");
-            result.put("message", "Connection successful");
-            result.put("databaseVersion", databaseVersion);
+            } finally {
+                connectionManager.closeQuietly(connection);
+            }
+
         } catch (Exception e) {
             result.put("success", "false");
             result.put("message", "Connection failed: " + e.getMessage());
@@ -126,17 +129,6 @@ public class MetadataExtractionService {
         } catch (Exception e) {
             log.error("Failed to update scan status for scan {}", scanId, e);
         }
-    }
-
-    private String buildJdbcUrl(Connector connector) {
-        return switch (connector.getDatabaseType()) {
-            case MYSQL -> String.format("jdbc:mysql://%s:%d/%s",
-                    connector.getHost(), connector.getPort(), connector.getDatabaseName());
-            case POSTGRESQL -> String.format("jdbc:postgresql://%s:%d/%s",
-                    connector.getHost(), connector.getPort(), connector.getDatabaseName());
-            case MSSQL -> String.format("jdbc:sqlserver://%s:%d;databaseName=%s",
-                    connector.getHost(), connector.getPort(), connector.getDatabaseName());
-        };
     }
 
     private String getSchemaOrDatabase(Connector connector) {

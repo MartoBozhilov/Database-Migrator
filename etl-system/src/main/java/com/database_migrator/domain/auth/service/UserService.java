@@ -2,6 +2,7 @@ package com.database_migrator.domain.auth.service;
 
 import com.database_migrator.domain.auth.dto.UserCreateRequest;
 import com.database_migrator.domain.auth.dto.UserResponse;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
 import com.database_migrator.domain.common.mapper.ResponseMapper;
 import com.database_migrator.domain.auth.model.Organization;
 import com.database_migrator.domain.auth.model.User;
@@ -12,6 +13,8 @@ import com.database_migrator.domain.auth.repository.UserRepository;
 import com.database_migrator.domain.auth.repository.UserRoleRepository;
 import com.database_migrator.domain.common.util.SecurityUtils;
 import com.database_migrator.config.security.TokenVersionCache;
+import com.database_migrator.domain.common.exception.ValidationException;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,7 +40,7 @@ public class UserService {
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new ValidationException("Email already exists", List.of("Duplicate email: " + request.getEmail()));
         }
 
         Organization organization = resolveOrganization(request);
@@ -50,11 +53,12 @@ public class UserService {
 
     public UserResponse findById(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
         Long currentOrgId = securityUtils.getCurrentOrganizationId();
         if (!user.getOrganization().getId().equals(currentOrgId)) {
-            throw new RuntimeException("Access denied: User belongs to different organization");
+            throw new BusinessRuleException("Access denied: User belongs to different organization",
+                    "USER_ORGANIZATION_MISMATCH");
         }
 
         return responseMapper.toUserResponse(user);
@@ -73,16 +77,15 @@ public class UserService {
     public UserResponse assignRole(Long userId, UserRoleEnum roleEnum) {
         // Only ADMIN can assign roles (accessed via /api/admin/users/{id}/roles)
         if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
-            throw new RuntimeException("Access denied: Only ADMIN can assign roles");
+            throw new BusinessRuleException("Access denied: Only ADMIN can assign roles",
+                    "INSUFFICIENT_PERMISSIONS");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // ADMIN can assign roles to users in any organization (no org check)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
         UserRole role = userRoleRepository.findByRole(roleEnum)
-                .orElseThrow(() -> new RuntimeException("Role not found: " + roleEnum));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", roleEnum.name()));
 
         if (!user.getRoles().contains(role)) {
             user.getRoles().add(role);
@@ -96,18 +99,17 @@ public class UserService {
 
     @Transactional
     public UserResponse removeRole(Long userId, UserRoleEnum roleEnum) {
-        // Only ADMIN can remove roles (accessed via /api/admin/users/{id}/roles)
         if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
-            throw new RuntimeException("Access denied: Only ADMIN can remove roles");
+            throw new BusinessRuleException("Access denied: Only ADMIN can remove roles",
+                    "INSUFFICIENT_PERMISSIONS");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
-        // ADMIN can remove roles from users in any organization (no org check)
 
         UserRole role = userRoleRepository.findByRole(roleEnum)
-                .orElseThrow(() -> new RuntimeException("Role not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", roleEnum.name()));
 
         user.getRoles().remove(role);
         user.setTokenVersion(user.getTokenVersion() + 1);
@@ -119,29 +121,29 @@ public class UserService {
 
     @Transactional
     public UserResponse assignRoleToOrgUser(Long userId, UserRoleEnum roleEnum) {
-        // ADMIN or MIGRATION_ADMIN can assign roles (accessed via /api/users/{id}/roles)
         if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN) && !SecurityUtils.hasRole(UserRoleEnum.MIGRATION_ADMIN)) {
-            throw new RuntimeException("Access denied: Only ADMIN or MIGRATION_ADMIN can assign roles");
+            throw new BusinessRuleException("Access denied: Only ADMIN or MIGRATION_ADMIN can assign roles",
+                    "INSUFFICIENT_PERMISSIONS");
         }
 
-        // MIGRATION_ADMIN can only assign operational roles
         if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN) && SecurityUtils.hasRole(UserRoleEnum.MIGRATION_ADMIN)) {
             if (roleEnum == UserRoleEnum.ADMIN || roleEnum == UserRoleEnum.MIGRATION_ADMIN) {
-                throw new RuntimeException("Access denied: MIGRATION_ADMIN cannot assign ADMIN or MIGRATION_ADMIN roles");
+                throw new BusinessRuleException("Access denied: MIGRATION_ADMIN cannot assign ADMIN or MIGRATION_ADMIN roles",
+                        "INSUFFICIENT_PERMISSIONS");
             }
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
-        // Enforce organization isolation (both ADMIN and MIGRATION_ADMIN)
         Long currentOrgId = securityUtils.getCurrentOrganizationId();
         if (!user.getOrganization().getId().equals(currentOrgId)) {
-            throw new RuntimeException("Access denied: User belongs to different organization");
+            throw new BusinessRuleException("Access denied: User belongs to different organization",
+                    "USER_ORGANIZATION_MISMATCH");
         }
 
         UserRole role = userRoleRepository.findByRole(roleEnum)
-                .orElseThrow(() -> new RuntimeException("Role not found: " + roleEnum));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", roleEnum.name()));
 
         if (!user.getRoles().contains(role)) {
             user.getRoles().add(role);
@@ -155,22 +157,22 @@ public class UserService {
 
     @Transactional
     public UserResponse removeRoleFromOrgUser(Long userId, UserRoleEnum roleEnum) {
-        // ADMIN or MIGRATION_ADMIN can remove roles (accessed via /api/users/{id}/roles)
         if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN) && !SecurityUtils.hasRole(UserRoleEnum.MIGRATION_ADMIN)) {
-            throw new RuntimeException("Access denied: Only ADMIN or MIGRATION_ADMIN can remove roles");
+            throw new BusinessRuleException("Access denied: Only ADMIN or MIGRATION_ADMIN can remove roles",
+                    "INSUFFICIENT_PERMISSIONS");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
-        // Enforce organization isolation (both ADMIN and MIGRATION_ADMIN)
         Long currentOrgId = securityUtils.getCurrentOrganizationId();
         if (!user.getOrganization().getId().equals(currentOrgId)) {
-            throw new RuntimeException("Access denied: User belongs to different organization");
+            throw new BusinessRuleException("Access denied: User belongs to different organization",
+                    "USER_ORGANIZATION_MISMATCH");
         }
 
         UserRole role = userRoleRepository.findByRole(roleEnum)
-                .orElseThrow(() -> new RuntimeException("Role not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", roleEnum.name()));
 
         user.getRoles().remove(role);
         user.setTokenVersion(user.getTokenVersion() + 1);
@@ -183,11 +185,12 @@ public class UserService {
     @Transactional
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
         Long currentOrgId = securityUtils.getCurrentOrganizationId();
         if (!user.getOrganization().getId().equals(currentOrgId)) {
-            throw new RuntimeException("Access denied: User belongs to different organization");
+            throw new BusinessRuleException("Access denied: User belongs to different organization",
+                    "USER_ORGANIZATION_MISMATCH");
         }
 
         userRepository.delete(user);
@@ -202,7 +205,7 @@ public class UserService {
             return currentUser.getOrganization().getId().equals(request.getOrganizationId())
                     ? currentUser.getOrganization()
                     : organizationRepository.findById(request.getOrganizationId())
-                    .orElseThrow(() -> new RuntimeException("Organization not found with id: " + request.getOrganizationId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Organization", request.getOrganizationId()));
         } else {
             return currentUser.getOrganization();
         }

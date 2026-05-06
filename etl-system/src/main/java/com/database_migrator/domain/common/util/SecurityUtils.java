@@ -3,6 +3,8 @@ package com.database_migrator.domain.common.util;
 import com.database_migrator.domain.auth.model.User;
 import com.database_migrator.domain.auth.model.UserRoleEnum;
 import com.database_migrator.domain.auth.repository.UserRepository;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -28,9 +30,9 @@ public class SecurityUtils {
         String email = getCurrentUserEmail();
         if (email != null) {
             return userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("User", email));
         }
-        throw new RuntimeException("No authenticated user");
+        throw new BusinessRuleException("No authenticated user", "NOT_AUTHENTICATED");
     }
 
     public Long getCurrentOrganizationId() {

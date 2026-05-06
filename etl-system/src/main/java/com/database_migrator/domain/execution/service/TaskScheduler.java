@@ -3,6 +3,7 @@ package com.database_migrator.domain.execution.service;
 import com.database_migrator.domain.common.util.TransformationUtils;
 import com.database_migrator.domain.execution.model.Cycle;
 import com.database_migrator.domain.execution.model.Task;
+import com.database_migrator.domain.common.exception.ExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,29 +18,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Task Scheduler using Topological Sort (Kahn's Algorithm)
- * Ensures that all dependencies are fully satisfied before scheduling a task.
- * Algorithm:
- * 1. Find tasks with 0 dependencies -> Batch 0
- * 2. Remove those tasks from graph
- * 3. Find tasks whose dependencies are now satisfied -> Batch 1
- * 4. Repeat until all tasks scheduled
- * Result:
- * - Tasks in same batch can run in PARALLEL
- * - Batches must run SEQUENTIALLY (wait for previous batch to complete)
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class TaskScheduler {
 
-    /**
-     * Build task graph from cycle
-     *
-     * @param cycle Execution cycle with tasks
-     * @return Map<Task, Set < dependencies>>
-     */
     public Map<Task, Set<Task>> buildTaskGraph(Cycle cycle) {
         Map<Task, Set<Task>> graph = new HashMap<>();
 
@@ -61,7 +44,6 @@ public class TaskScheduler {
      * 3. Find tasks whose dependencies are now all satisfied (batch 1)
      * 4. Repeat until all tasks are scheduled
      *
-     * @param taskGraph Dependency graph (Task -> Set of dependencies)
      * @return Deque of task batches ordered by execution level (FIFO order)
      */
     public Deque<List<Task>> computeExecutionBatches(Map<Task, Set<Task>> taskGraph) {
@@ -90,7 +72,7 @@ public class TaskScheduler {
                                 .map(task -> TransformationUtils
                                         .getEffectiveTableName(task.getTransformationTable()))
                                 .collect(Collectors.joining(", ")));
-                throw new RuntimeException("Circular dependency detected in task graph");
+                throw new ExecutionException("Circular dependency detected in task graph", null);
             }
 
             batches.add(currentBatch);

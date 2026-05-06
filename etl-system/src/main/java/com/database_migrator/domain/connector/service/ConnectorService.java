@@ -11,6 +11,9 @@ import com.database_migrator.domain.connector.repository.ConnectorRepository;
 import com.database_migrator.domain.scan.repository.SystemScanRepository;
 import com.database_migrator.domain.common.util.SecurityUtils;
 import com.database_migrator.domain.scan.service.MetadataExtractionService;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
+import com.database_migrator.domain.common.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +39,8 @@ public class ConnectorService {
         User currentUser = securityUtils.getCurrentUser();
 
         if (connectorRepository.existsByNameAndCreatedBy_Organization_Id(request.getName(), orgId)) {
-            throw new RuntimeException("Connector with name '" + request.getName() + "' already exists in your organization");
+            throw new ValidationException("Connector with name '" + request.getName() + "' already exists in your organization",
+                    List.of("Duplicate connector name: " + request.getName()));
         }
 
         Connector connector = buildConnector(request, currentUser);
@@ -57,7 +61,7 @@ public class ConnectorService {
         Long orgId = securityUtils.getCurrentOrganizationId();
         Connector connector = connectorRepository
                 .findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Connector not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Connector", id));
         return responseMapper.toConnectorResponse(connector);
     }
 
@@ -66,12 +70,13 @@ public class ConnectorService {
         Long orgId = securityUtils.getCurrentOrganizationId();
         Connector connector = connectorRepository
                 .findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Connector not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Connector", id));
 
         if (request.getName() != null) {
             if (!request.getName().equals(connector.getName()) &&
                     connectorRepository.existsByNameAndCreatedBy_Organization_Id(request.getName(), orgId)) {
-                throw new RuntimeException("Connector with name '" + request.getName() + "' already exists");
+                throw new ValidationException("Connector with name '" + request.getName() + "' already exists",
+                        List.of("Duplicate connector name: " + request.getName()));
             }
             connector.setName(request.getName());
         }
@@ -107,12 +112,12 @@ public class ConnectorService {
         Long orgId = securityUtils.getCurrentOrganizationId();
         Connector connector = connectorRepository
                 .findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Connector not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Connector", id));
 
-        // Check if connector has any system scans
         if (systemScanRepository.existsBySourceConnector_Id(connector.getId())) {
-            throw new RuntimeException("Cannot delete connector '" + connector.getName() +
-                    "' because it has associated system scans. Please delete the scans first.");
+            throw new BusinessRuleException("Cannot delete connector '" + connector.getName() +
+                    "' because it has associated system scans. Please delete the scans first.",
+                    "CONNECTOR_IN_USE");
         }
 
         connectorRepository.delete(connector);
@@ -122,7 +127,7 @@ public class ConnectorService {
         Long orgId = securityUtils.getCurrentOrganizationId();
         Connector connector = connectorRepository
                 .findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Connector not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Connector", id));
 
         Map<String, String> result = metadataExtractionService.testConnection(connector);
         boolean success = Boolean.parseBoolean(result.get("success"));

@@ -21,13 +21,19 @@ import com.database_migrator.domain.transformation.repository.TransformationTabl
 import com.database_migrator.domain.common.util.SecurityUtils;
 import com.database_migrator.domain.common.util.TransformationUtils;
 import com.database_migrator.config.database.TypeMappingLoader;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
+import com.database_migrator.domain.common.exception.ValidationException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import static com.database_migrator.domain.common.util.TransformationUtils.*;
+import static com.database_migrator.domain.common.util.TransformationUtils.getEffectiveColumnName;
+import static com.database_migrator.domain.common.util.TransformationUtils.getEffectiveTableName;
+import static com.database_migrator.domain.common.util.TransformationUtils.isColumnDeleted;
+import static com.database_migrator.domain.common.util.TransformationUtils.validateModelNotConfirmed;
 
 import java.util.List;
 import java.util.Objects;
@@ -57,7 +63,7 @@ public class TransformationColumnService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
@@ -73,7 +79,6 @@ public class TransformationColumnService {
         String oldColumnName = getEffectiveColumnName(column);
         String tableName = getEffectiveTableName(table);
 
-        // Find or create RENAME_COLUMN assignment
         ColumnTransformationAssignment assignment = findOrCreateAssignment(column, ColumnTransformationType.RENAME_COLUMN);
         assignment.setNewName(request.getNewName());
         assignmentRepository.save(assignment);
@@ -90,7 +95,7 @@ public class TransformationColumnService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
@@ -98,23 +103,23 @@ public class TransformationColumnService {
 
         // Validate column has source metadata (cannot change type of ADD_COLUMN)
         if (column.getSourceColumnMetadata() == null) {
-            throw new RuntimeException("Cannot change type of user-created columns. Type is defined in ADD_COLUMN transformation.");
+            throw new BusinessRuleException("Cannot change type of user-created columns. Type is defined in ADD_COLUMN transformation.",
+                    "CANNOT_CHANGE_TYPE_OF_USER_CREATED_COLUMN");
         }
 
-        // Validate type conversion
         DatabaseTypeEnum sourceDb = model.getSystemScan().getSourceConnector().getDatabaseType();
         DatabaseTypeEnum targetDb = model.getTargetConnector().getDatabaseType();
         String sourceType = column.getSourceColumnMetadata().getDataType();
 
         boolean isValid = typeMappingLoader.isValidTypeConversion(sourceType, sourceDb, request.getTargetDataType(), targetDb);
         if (!isValid) {
-            throw new RuntimeException(
+            throw new ValidationException(
                     String.format("Invalid type conversion: %s %s -> %s %s. Check allowed type mappings.",
-                            sourceDb, sourceType, targetDb, request.getTargetDataType())
+                            sourceDb, sourceType, targetDb, request.getTargetDataType()),
+                    List.of("Invalid type conversion from " + sourceType + " to " + request.getTargetDataType())
             );
         }
 
-        // Find or create CHANGE_TYPE assignment
         ColumnTransformationAssignment assignment = findOrCreateAssignment(column, ColumnTransformationType.CHANGE_TYPE);
         assignment.setTargetDataType(request.getTargetDataType());
         assignmentRepository.save(assignment);
@@ -131,7 +136,7 @@ public class TransformationColumnService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
@@ -146,10 +151,11 @@ public class TransformationColumnService {
         );
 
         if (!isValidType) {
-            throw new RuntimeException(
+            throw new ValidationException(
                     String.format("Invalid data type '%s' for target database %s. Please use a valid type for this database.",
                             request.getDataType(),
-                            model.getTargetConnector().getDatabaseType())
+                            model.getTargetConnector().getDatabaseType()),
+                    List.of("Invalid data type: " + request.getDataType())
             );
         }
 
@@ -159,7 +165,7 @@ public class TransformationColumnService {
         // Create new column
         TransformationColumn column = new TransformationColumn();
         column.setTransformationTable(table);
-        column.setSourceColumnMetadata(null); // User-created column
+        column.setSourceColumnMetadata(null);
 
         // Resolve target type
         String resolvedType = typeResolutionService.resolveAddColumnType(request.getDataType());
@@ -167,7 +173,7 @@ public class TransformationColumnService {
 
         column = columnRepository.save(column);
 
-        createAddColumnAssignment(column, request);
+        assignmentRepository.save(createAddColumnAssignment(column, request));
 
         return getModelDetailsResponse(modelId, orgId);
     }
@@ -177,7 +183,7 @@ public class TransformationColumnService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
@@ -187,7 +193,6 @@ public class TransformationColumnService {
         // Validate column deletion
         validateColumnDeletion(column, table, model);
 
-        // Find or create DELETE_COLUMN assignment
         ColumnTransformationAssignment assignment = findOrCreateAssignment(column, ColumnTransformationType.DELETE_COLUMN);
         assignmentRepository.save(assignment);
 
@@ -195,7 +200,7 @@ public class TransformationColumnService {
     }
 
     private void validateColumnDeletion(TransformationColumn column, TransformationTable table, TransformationModel model) {
-        // Only validate columns from source metadata (not user-created columns)
+        // Only validate columns from source metadata
         if (column.getSourceColumnMetadata() == null) {
             return; // User-created column (ADD_COLUMN) - can always be deleted
         }
@@ -224,9 +229,10 @@ public class TransformationColumnService {
                         && rel.getPrimaryColumn().equalsIgnoreCase(columnName));
 
         if (isReferencedAsPrimaryKey) {
-            throw new RuntimeException(
+            throw new BusinessRuleException(
                     String.format("Cannot delete column '%s' because it is referenced as a primary key in foreign key relationships. " +
-                            "Please delete the foreign key relationships first.", columnName)
+                            "Please delete the foreign key relationships first.", columnName),
+                    "COLUMN_REFERENCED_AS_PRIMARY_KEY"
             );
         }
     }
@@ -242,9 +248,10 @@ public class TransformationColumnService {
                         && rel.getForeignColumn().equalsIgnoreCase(columnName));
 
         if (isUsedInForeignKey) {
-            throw new RuntimeException(
+            throw new BusinessRuleException(
                     String.format("Cannot delete column '%s' because it is part of a foreign key relationship. " +
-                            "Please delete the foreign key relationship first.", columnName)
+                            "Please delete the foreign key relationship first.", columnName),
+                    "COLUMN_USED_IN_FOREIGN_KEY"
             );
         }
     }
@@ -263,27 +270,29 @@ public class TransformationColumnService {
                         && a.getDefaultValue() != null);
 
         if (!hasDefaultValue) {
-            throw new RuntimeException(
+            throw new BusinessRuleException(
                     String.format("Cannot delete NOT NULL column '%s' without a default value. " +
                                     "Either add a DEFAULT_VALUE transformation first, or make the column nullable.",
-                            sourceColumn.getColumnName())
+                            sourceColumn.getColumnName()),
+                    "CANNOT_DELETE_NOT_NULL_COLUMN_WITHOUT_DEFAULT"
             );
         }
     }
 
     private void validateColumnName(String columnName, TransformationModel model) {
         if (columnName == null || columnName.trim().isEmpty()) {
-            throw new RuntimeException("Column name is required");
+            throw new ValidationException("Column name is required", List.of("Column name cannot be null or empty"));
         }
         sqlIdentifierValidator.validateIdentifier(columnName, model.getTargetConnector().getDatabaseType());
     }
 
     private TransformationTable getTableAndValidateOwnership(Long tableId, Long modelId) {
         TransformationTable table = tableRepository.findById(tableId)
-                .orElseThrow(() -> new RuntimeException("Transformation table not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationTable", tableId));
 
         if (!table.getTransformationModel().getId().equals(modelId)) {
-            throw new RuntimeException("Table does not belong to this transformation model");
+            throw new BusinessRuleException("Table does not belong to this transformation model",
+                    "TABLE_MODEL_MISMATCH");
         }
 
         return table;
@@ -291,10 +300,11 @@ public class TransformationColumnService {
 
     private TransformationColumn getColumnAndValidateOwnership(Long columnId, Long tableId) {
         TransformationColumn column = columnRepository.findById(columnId)
-                .orElseThrow(() -> new RuntimeException("Transformation column not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationColumn", columnId));
 
         if (!column.getTransformationTable().getId().equals(tableId)) {
-            throw new RuntimeException("Column does not belong to this table");
+            throw new BusinessRuleException("Column does not belong to this table",
+                    "COLUMN_TABLE_MISMATCH");
         }
 
         return column;
@@ -321,7 +331,8 @@ public class TransformationColumnService {
         Set<String> existingColumnNames = getExistingColumnNames(table, excludeColumnId);
 
         if (existingColumnNames.contains(columnName.toLowerCase())) {
-            throw new RuntimeException("Column with name '" + columnName + "' already exists in this table");
+            throw new ValidationException("Column with name '" + columnName + "' already exists in this table",
+                    List.of("Duplicate column name: " + columnName));
         }
     }
 
@@ -345,7 +356,7 @@ public class TransformationColumnService {
         assignment.setIsPrimaryKey(request.getIsPrimaryKey());
         assignment.setDefaultValue(request.getDefaultValue());
 
-        return assignmentRepository.save(assignment);
+        return assignment;
     }
 
     private List<TransformationRelation> updateRelationsForRenamedColumn(Long modelId, String tableName, String oldColumnName, String newColumnName) {
@@ -374,7 +385,7 @@ public class TransformationColumnService {
         entityManager.flush(); // Ensure all changes are persisted
         entityManager.clear(); // Clear persistence context to force reload
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
         return responseMapper.toTransformationModelDetailsResponse(model);
     }
 }

@@ -19,6 +19,9 @@ import com.database_migrator.domain.transformation.repository.TransformationRela
 import com.database_migrator.domain.transformation.repository.TransformationTableRepository;
 import com.database_migrator.domain.common.util.SecurityUtils;
 import com.database_migrator.config.database.TypeMappingLoader;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
+import com.database_migrator.domain.common.exception.ValidationException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -55,7 +58,7 @@ public class TransformationTableService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new com.database_migrator.domain.common.exception.ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
@@ -87,7 +90,7 @@ public class TransformationTableService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new com.database_migrator.domain.common.exception.ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
@@ -110,7 +113,7 @@ public class TransformationTableService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new com.database_migrator.domain.common.exception.ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
@@ -131,20 +134,20 @@ public class TransformationTableService {
 
     private void validateTableName(String tableName, TransformationModel model) {
         if (tableName == null || tableName.trim().isEmpty()) {
-            throw new RuntimeException("Table name is required");
+            throw new ValidationException("Table name is required", List.of("Table name cannot be null or empty"));
         }
         sqlIdentifierValidator.validateIdentifier(tableName, model.getTargetConnector().getDatabaseType());
     }
 
     private void validateAddTableRequest(TableTransformationRequest request, TransformationModel model) {
         if (request.getTableName() == null || request.getTableName().trim().isEmpty()) {
-            throw new RuntimeException("Table name is required");
+            throw new ValidationException("Table name is required", List.of("Table name cannot be null or empty"));
         }
         if (request.getIdColumnName() == null || request.getIdColumnName().trim().isEmpty()) {
-            throw new RuntimeException("ID column name is required");
+            throw new ValidationException("ID column name is required", List.of("ID column name cannot be null or empty"));
         }
         if (request.getIdColumnDataType() == null || request.getIdColumnDataType().trim().isEmpty()) {
-            throw new RuntimeException("ID column data type is required");
+            throw new ValidationException("ID column data type is required", List.of("ID column data type cannot be null or empty"));
         }
         sqlIdentifierValidator.validateIdentifier(request.getTableName(), model.getTargetConnector().getDatabaseType());
         sqlIdentifierValidator.validateIdentifier(request.getIdColumnName(), model.getTargetConnector().getDatabaseType());
@@ -156,10 +159,11 @@ public class TransformationTableService {
         );
 
         if (!isValidType) {
-            throw new RuntimeException(
+            throw new ValidationException(
                     String.format("Invalid data type '%s' for target database %s. Please use a valid type for this database.",
                             request.getIdColumnDataType(),
-                            model.getTargetConnector().getDatabaseType())
+                            model.getTargetConnector().getDatabaseType()),
+                    List.of("Invalid data type: " + request.getIdColumnDataType())
             );
         }
     }
@@ -182,7 +186,7 @@ public class TransformationTableService {
         return savedTable;
     }
 
-    private TransformationColumn createIdColumn(TransformationTable table, String idColumnName, String idColumnDataType) {
+    private void createIdColumn(TransformationTable table, String idColumnName, String idColumnDataType) {
         TransformationColumn idColumn = new TransformationColumn();
         idColumn.setTransformationTable(table);
         idColumn.setSourceColumnMetadata(null);
@@ -203,16 +207,15 @@ public class TransformationTableService {
         columnAssignment.setDefaultValue(null);
 
         columnAssignmentRepository.save(columnAssignment);
-
-        return savedColumn;
     }
 
     private TransformationTable getTableAndValidateOwnership(Long tableId, Long modelId) {
         TransformationTable table = tableRepository.findById(tableId)
-                .orElseThrow(() -> new RuntimeException("Transformation table not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationTable", tableId));
 
         if (!table.getTransformationModel().getId().equals(modelId)) {
-            throw new RuntimeException("Table does not belong to this transformation model");
+            throw new BusinessRuleException("Table does not belong to this transformation model",
+                    "TABLE_MODEL_MISMATCH");
         }
 
         return table;
@@ -289,7 +292,7 @@ public class TransformationTableService {
                 }
             }
 
-            throw new RuntimeException(errorMessage.toString());
+            throw new BusinessRuleException(errorMessage.toString(), "CANNOT_DELETE_TABLE_WITH_RELATIONS");
         }
     }
 
@@ -339,7 +342,8 @@ public class TransformationTableService {
         }
 
         if (existingTableNames.contains(tableName.toLowerCase())) {
-            throw new RuntimeException("Table with name '" + tableName + "' already exists in this transformation model");
+            throw new ValidationException("Table with name '" + tableName + "' already exists in this transformation model",
+                    List.of("Duplicate table name: " + tableName));
         }
     }
 
@@ -347,7 +351,7 @@ public class TransformationTableService {
         entityManager.flush(); // Ensure all changes are persisted
         entityManager.clear(); // Clear persistence context to force reload
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new com.database_migrator.domain.common.exception.ResourceNotFoundException("TransformationModel", modelId));
         return responseMapper.toTransformationModelDetailsResponse(model);
     }
 }

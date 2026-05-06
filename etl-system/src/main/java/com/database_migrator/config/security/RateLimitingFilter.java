@@ -19,9 +19,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private final Map<String, RateLimitBucket> buckets = new ConcurrentHashMap<>();
 
-    // Configuration
     private static final int MAX_REQUESTS_PER_MINUTE = 10;
-    private static final long CLEANUP_INTERVAL_MS = 60000; // 1 minute
+    private static final long CLEANUP_INTERVAL_MS = 60000;
 
     private long lastCleanup = System.currentTimeMillis();
 
@@ -64,8 +63,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         cleanupOldBuckets();
 
         RateLimitBucket bucket = buckets.computeIfAbsent(
-            clientIdentifier,
-            k -> new RateLimitBucket(MAX_REQUESTS_PER_MINUTE)
+                clientIdentifier,
+                k -> new RateLimitBucket(MAX_REQUESTS_PER_MINUTE)
         );
 
         return bucket.tryConsume();

@@ -1,11 +1,13 @@
 package com.database_migrator.domain.execution.service;
 
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
 import com.database_migrator.domain.execution.model.Cycle;
 import com.database_migrator.domain.execution.model.Task;
 import com.database_migrator.domain.execution.model.CycleStatusEnum;
 import com.database_migrator.domain.execution.model.TaskStatusEnum;
 import com.database_migrator.domain.execution.repository.CycleRepository;
 import com.database_migrator.domain.execution.repository.TaskRepository;
+import com.database_migrator.domain.common.exception.ExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -18,10 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Async Cycle Executor Service
- * Handles asynchronous execution of migration cycles
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -33,9 +31,6 @@ public class AsyncCycleExecutor {
     private final ParallelExecutionService parallelExecutionService;
     private final TaskExecutor taskExecutor;
 
-    /**
-     * Execute cycle asynchronously in background thread
-     */
     @Async("cycleExecutionTaskExecutor")
     @Transactional
     public void executeAsync(Long cycleId) {
@@ -43,7 +38,7 @@ public class AsyncCycleExecutor {
 
         // Fetch cycle with tasks eagerly loaded
         Cycle cycle = cycleRepository.findById(cycleId)
-                .orElseThrow(() -> new RuntimeException("Cycle not found: " + cycleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Cycle", cycleId));
 
         try {
             // Build task graph
@@ -83,7 +78,7 @@ public class AsyncCycleExecutor {
             cycle.setErrorMessage("Execution failed: " + e.getMessage());
             cycleRepository.save(cycle);
 
-            throw new RuntimeException("Cycle execution failed: " + e.getMessage(), e);
+            throw new ExecutionException("Cycle execution failed: " + e.getMessage(), e);
         }
     }
 }

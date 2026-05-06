@@ -24,12 +24,6 @@ public class TypeResolutionService {
 
     /**
      * Auto-resolve target types for all columns in a transformation model.
-     * <p>
-     * Resolution rules:
-     * 1. Cross-database migration (MySQL→PostgreSQL): ALWAYS resolve, even without transformations
-     * 2. Same-database + CHANGE_TYPE: resolve to user's specified type
-     * 3. Same-database + no transformations: leave NULL (use source type in Phase 5)
-     * 4. ADD_COLUMN: resolvedTargetType already set when column created
      */
     public void autoResolveAllColumnTypes(TransformationModel model) {
         DatabaseTypeEnum sourceDb = model.getSystemScan().getSourceConnector().getDatabaseType();
@@ -57,8 +51,6 @@ public class TypeResolutionService {
 
     /**
      * Resolve target type for a single column.
-     *
-     * @return resolved type or NULL if no resolution needed (same-db, no transformation)
      */
     public String resolveColumnType(TransformationColumn column,
                                     DatabaseTypeEnum sourceDb,
@@ -143,13 +135,11 @@ public class TypeResolutionService {
      */
     public String resolveAddColumnType(String dataType) {
         // For ADD_COLUMN, user explicitly specifies the type
-        // Just return it as-is (validation should happen before calling this)
         return dataType;
     }
 
     /**
-     * Get effective column type for Phase 5 execution.
-     * If resolvedTargetType exists, use it. Otherwise use source type.
+     * Get effective column type
      */
     public String getEffectiveColumnType(TransformationColumn column) {
         if (column.getResolvedTargetType() != null) {

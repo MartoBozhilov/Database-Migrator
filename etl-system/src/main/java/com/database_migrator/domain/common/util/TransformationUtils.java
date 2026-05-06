@@ -7,6 +7,7 @@ import com.database_migrator.domain.transformation.model.TransformationModel;
 import com.database_migrator.domain.transformation.model.TransformationTable;
 import com.database_migrator.domain.transformation.model.ColumnTransformationType;
 import com.database_migrator.domain.transformation.model.TableTransformationType;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
 
 import java.util.Optional;
 
@@ -18,7 +19,8 @@ public final class TransformationUtils {
 
     public static void validateModelNotConfirmed(TransformationModel model) {
         if (model.getIsConfirmed()) {
-            throw new RuntimeException("Cannot modify confirmed transformation model. Model is immutable after confirmation.");
+            throw new BusinessRuleException("Cannot modify confirmed transformation model. Model is immutable after confirmation.",
+                    "TRANSFORMATION_MODEL_CONFIRMED");
         }
     }
 

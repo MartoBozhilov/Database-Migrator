@@ -7,6 +7,7 @@ import com.database_migrator.domain.common.mapper.ResponseMapper;
 import com.database_migrator.domain.auth.model.User;
 import com.database_migrator.domain.auth.repository.UserRepository;
 import com.database_migrator.config.security.JwtTokenProvider;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -41,7 +42,7 @@ public class AuthService {
 
     public UserResponse getUserProfile(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
         return responseMapper.toUserResponse(user);
     }

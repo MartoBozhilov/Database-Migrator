@@ -32,6 +32,44 @@ public class ValidationResult {
         this.valid = false;
     }
 
+    public void addWarning(String warning) {
+        if (this.warnings == null) {
+            this.warnings = new ArrayList<>();
+        }
+        this.warnings.add(warning);
+    }
+
+    /**
+     * Merge another ValidationResult into this one.
+     * All errors and warnings from the other result are added to this result.
+     *
+     * @param other ValidationResult to merge
+     */
+    public void merge(ValidationResult other) {
+        if (other == null) {
+            return;
+        }
+
+        if (other.getErrors() != null) {
+            if (this.errors == null) {
+                this.errors = new ArrayList<>();
+            }
+            this.errors.addAll(other.getErrors());
+        }
+
+        if (other.getWarnings() != null) {
+            if (this.warnings == null) {
+                this.warnings = new ArrayList<>();
+            }
+            this.warnings.addAll(other.getWarnings());
+        }
+
+        // If other result is invalid, this result becomes invalid
+        if (!other.isValid()) {
+            this.valid = false;
+        }
+    }
+
     public boolean hasErrors() {
         return !errors.isEmpty();
     }

@@ -1,6 +1,7 @@
 package com.database_migrator.domain.transformation.service;
 
 import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
+import com.database_migrator.domain.common.exception.ValidationException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -16,9 +17,7 @@ import java.util.regex.Pattern;
 
 /**
  * Service for validating SQL identifiers (table names, column names)
- * - Loads reserved keywords from JSON file
  * - Validates against database-specific reserved keywords
- * - Validates SQL identifier rules (alphanumeric, underscores, no spaces)
  */
 @Service
 @Slf4j
@@ -49,24 +48,24 @@ public class SqlIdentifierValidator {
 
     public void validateIdentifier(String identifier, DatabaseTypeEnum databaseType) {
         if (identifier == null || identifier.trim().isEmpty()) {
-            throw new RuntimeException("Identifier cannot be null or empty");
+            throw new ValidationException("Identifier cannot be null or empty", List.of("Invalid identifier"));
         }
 
         String trimmedIdentifier = identifier.trim();
 
-        // Check length
         if (trimmedIdentifier.length() > MAX_IDENTIFIER_LENGTH) {
-            throw new RuntimeException("Identifier '" + identifier + "' exceeds maximum length of " + MAX_IDENTIFIER_LENGTH + " characters");
+            throw new ValidationException("Identifier '" + identifier + "' exceeds maximum length of " + MAX_IDENTIFIER_LENGTH + " characters",
+                    List.of("Identifier too long: " + trimmedIdentifier.length() + " characters"));
         }
 
-        // Check SQL identifier pattern (alphanumeric + underscores, must start with letter or underscore)
         if (!SQL_IDENTIFIER_PATTERN.matcher(trimmedIdentifier).matches()) {
-            throw new RuntimeException("Identifier '" + identifier + "' is invalid. Must start with letter or underscore and contain only letters, numbers, and underscores");
+            throw new ValidationException("Identifier '" + identifier + "' is invalid. Must start with letter or underscore and contain only letters, numbers, and underscores",
+                    List.of("Invalid identifier pattern: " + identifier));
         }
 
-        // Check reserved keywords
         if (isReservedKeyword(trimmedIdentifier, databaseType)) {
-            throw new RuntimeException("Identifier '" + identifier + "' is a reserved keyword in " + databaseType);
+            throw new ValidationException("Identifier '" + identifier + "' is a reserved keyword in " + databaseType,
+                    List.of("Reserved keyword: " + identifier));
         }
     }
 

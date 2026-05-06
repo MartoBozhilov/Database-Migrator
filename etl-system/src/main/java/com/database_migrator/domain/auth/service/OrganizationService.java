@@ -4,6 +4,7 @@ import com.database_migrator.domain.auth.dto.CreateOrganizationUserRequest;
 import com.database_migrator.domain.auth.dto.OrganizationCreateRequest;
 import com.database_migrator.domain.auth.dto.OrganizationResponse;
 import com.database_migrator.domain.auth.dto.UserResponse;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
 import com.database_migrator.domain.common.mapper.ResponseMapper;
 import com.database_migrator.domain.auth.model.Organization;
 import com.database_migrator.domain.auth.model.User;
@@ -13,6 +14,8 @@ import com.database_migrator.domain.auth.repository.OrganizationRepository;
 import com.database_migrator.domain.auth.repository.UserRepository;
 import com.database_migrator.domain.auth.repository.UserRoleRepository;
 import com.database_migrator.domain.common.util.SecurityUtils;
+import com.database_migrator.domain.common.exception.ValidationException;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,14 +39,14 @@ public class OrganizationService {
 
     @Transactional
     public OrganizationResponse create(OrganizationCreateRequest request) {
-        // Only ADMIN can create organizations
         if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
-            throw new RuntimeException("Access denied: Only ADMIN can create organizations");
+            throw new BusinessRuleException("Access denied: Only ADMIN can create organizations",
+                    "INSUFFICIENT_PERMISSIONS");
         }
 
-        // Check if organization name already exists
         if (organizationRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Organization with name '" + request.getName() + "' already exists");
+            throw new ValidationException("Organization with name '" + request.getName() + "' already exists",
+                    List.of("Duplicate organization name: " + request.getName()));
         }
 
         Organization organization = buildOrganization(request);
@@ -55,17 +58,17 @@ public class OrganizationService {
 
     @Transactional
     public UserResponse createMigrationAdmin(CreateOrganizationUserRequest request) {
-        // Only ADMIN can create MIGRATION_ADMIN for an organization
         if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
-            throw new RuntimeException("Access denied: Only ADMIN can create organization users");
+            throw new BusinessRuleException("Access denied: Only ADMIN can create MIGRATION_ADMIN to Organisation",
+                    "INSUFFICIENT_PERMISSIONS");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new ValidationException("Email already exists", List.of("Duplicate email: " + request.getEmail()));
         }
 
         Organization organization = organizationRepository.findById(request.getOrganizationId())
-                .orElseThrow(() -> new RuntimeException("Organization not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Organization", request.getOrganizationId()));
 
         User user = buildUser(request, organization);
 
@@ -78,12 +81,13 @@ public class OrganizationService {
 
     public OrganizationResponse findById(Long orgId) {
         Organization organization = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new RuntimeException("Organization not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Organization", orgId));
 
         if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
             Long currentOrgId = securityUtils.getCurrentOrganizationId();
             if (!organization.getId().equals(currentOrgId)) {
-                throw new RuntimeException("Access denied: Cannot view other organizations");
+                throw new BusinessRuleException("Access denied: Cannot view other organizations",
+                        "ORGANIZATION_ACCESS_DENIED");
             }
         }
 
@@ -92,12 +96,13 @@ public class OrganizationService {
 
     public OrganizationResponse findByName(String name) {
         Organization organization = organizationRepository.findByName(name)
-                .orElseThrow(() -> new RuntimeException("Organization not found with name: " + name));
+                .orElseThrow(() -> new ResourceNotFoundException("Organization", name));
 
         if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
             Long currentOrgId = securityUtils.getCurrentOrganizationId();
             if (!organization.getId().equals(currentOrgId)) {
-                throw new RuntimeException("Access denied: Cannot view other organizations");
+                throw new BusinessRuleException("Access denied: Cannot view other organizations",
+                        "ORGANIZATION_ACCESS_DENIED");
             }
         }
 
@@ -106,7 +111,8 @@ public class OrganizationService {
 
     public List<OrganizationResponse> findAll() {
         if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
-            throw new RuntimeException("Access denied: Only ADMIN can list all organizations");
+            throw new BusinessRuleException("Access denied: Only ADMIN can list all organizations",
+                    "INSUFFICIENT_PERMISSIONS");
         }
 
         return organizationRepository.findAll().stream()
@@ -139,20 +145,20 @@ public class OrganizationService {
     public void assignAdministrativeRoles(User user, UserRoleEnum adminRole) {
         // Assign administrative role (ADMIN or MIGRATION_ADMIN)
         UserRole administrativeRole = userRoleRepository.findByRole(adminRole)
-                .orElseThrow(() -> new RuntimeException(adminRole + " role not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", adminRole.name()));
         user.getRoles().add(administrativeRole);
 
         // Add all operational roles
         UserRole connectorUserRole = userRoleRepository.findByRole(UserRoleEnum.CONNECTOR_USER)
-                .orElseThrow(() -> new RuntimeException("CONNECTOR_USER role not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", "CONNECTOR_USER"));
         user.getRoles().add(connectorUserRole);
 
         UserRole transformationUserRole = userRoleRepository.findByRole(UserRoleEnum.TRANSFORMATION_MODEL_USER)
-                .orElseThrow(() -> new RuntimeException("TRANSFORMATION_MODEL_USER role not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", "TRANSFORMATION_MODEL_USER"));
         user.getRoles().add(transformationUserRole);
 
         UserRole cycleExecutionUserRole = userRoleRepository.findByRole(UserRoleEnum.CYCLE_EXECUTION_USER)
-                .orElseThrow(() -> new RuntimeException("CYCLE_EXECUTION_USER role not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", "CYCLE_EXECUTION_USER"));
         user.getRoles().add(cycleExecutionUserRole);
     }
 }

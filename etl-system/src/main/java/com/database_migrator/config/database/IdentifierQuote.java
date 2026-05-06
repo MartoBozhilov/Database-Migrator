@@ -5,9 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Identifier quote configuration (quotes, backticks, brackets)
- */
 @Getter
 @Setter
 @NoArgsConstructor

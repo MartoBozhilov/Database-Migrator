@@ -7,50 +7,37 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
 
-/**
- * Async Configuration for Background Tasks
- * Provides thread pools for:
- * - Metadata extraction (system scans)
- * - Cycle execution (data migration)
- */
 @Configuration
 @EnableAsync
 public class AsyncConfig {
 
-    /**
-     * Task executor for metadata extraction (system scans)
-     */
+    private static final int CORE_POOL_SIZE = 2;
+    private static final int MAX_POOL_SIZE = 5;
+    private static final int QUEUE_CAPACITY = 100;
+    private static final int AWAIT_TERMINAL_COMPLETE_SECONDS = 60;
+
     @Bean(name = "metadataExtractionTaskExecutor")
     public Executor metadataExtractionTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(5);
-        executor.setQueueCapacity(100);
+        executor.setCorePoolSize(CORE_POOL_SIZE);
+        executor.setMaxPoolSize(MAX_POOL_SIZE);
+        executor.setQueueCapacity(QUEUE_CAPACITY);
         executor.setThreadNamePrefix("metadata-extraction-");
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(60);
+        executor.setAwaitTerminationSeconds(AWAIT_TERMINAL_COMPLETE_SECONDS);
         executor.initialize();
         return executor;
     }
 
-    /**
-     * Task executor for cycle execution (data migration)
-     *
-     * - Core pool: 2 threads (minimum always available)
-     * - Max pool: 5 threads (maximum concurrent cycle executions)
-     * - Queue: 100 (pending cycle executions)
-     *
-     * Allows up to 5 cycles to execute concurrently
-     */
     @Bean(name = "cycleExecutionTaskExecutor")
     public Executor cycleExecutionTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(5);
-        executor.setQueueCapacity(100);
+        executor.setCorePoolSize(CORE_POOL_SIZE);
+        executor.setMaxPoolSize(MAX_POOL_SIZE);
+        executor.setQueueCapacity(QUEUE_CAPACITY);
         executor.setThreadNamePrefix("cycle-exec-");
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(60);
+        executor.setAwaitTerminationSeconds(AWAIT_TERMINAL_COMPLETE_SECONDS);
         executor.initialize();
         return executor;
     }

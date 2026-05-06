@@ -17,14 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * DDL Generator Service
  * Generates CREATE TABLE DDL with FK constraints included
- * Uses DatabaseDialectLoader for extensible database-specific syntax
- * Features:
- * - CREATE TABLE with inline FK constraints
- * - AUTO_INCREMENT handling (SERIAL/AUTO_INCREMENT/IDENTITY)
- * - DEFAULT function mapping (CURRENT_TIMESTAMP/GETDATE(), UUID/NEWID)
- * - Identifier escaping (quotes/backticks/brackets)
  */
 @Service
 @RequiredArgsConstructor
@@ -66,7 +59,7 @@ public class DDLGenerator {
             ddl.append(",\n  PRIMARY KEY (").append(String.join(", ", pkColumns)).append(")");
         }
 
-        // Add FOREIGN KEY constraints (ONE-STEP: included in CREATE TABLE)
+        // Add FOREIGN KEY constraints
         List<String> fkConstraints = generateForeignKeyConstraints(tableName, model, targetDb);
         for (String fkConstraint : fkConstraints) {
             ddl.append(",\n  ").append(fkConstraint);
@@ -128,7 +121,7 @@ public class DDLGenerator {
         // Check for CHANGE_TYPE transformation with default value
         for (ColumnTransformationAssignment assignment : column.getAssignments()) {
             if (assignment.getTransformationType() == ColumnTransformationType.CHANGE_TYPE ||
-                assignment.getTransformationType() == ColumnTransformationType.ADD_COLUMN) {
+                    assignment.getTransformationType() == ColumnTransformationType.ADD_COLUMN) {
 
                 String defaultValue = assignment.getDefaultValue();
                 if (defaultValue != null && !defaultValue.isEmpty()) {
@@ -143,11 +136,6 @@ public class DDLGenerator {
 
     /**
      * Generate FOREIGN KEY constraints for this table (included in CREATE TABLE)
-     *
-     * @param tableName Table name
-     * @param model Transformation model
-     * @param targetDb Target database type
-     * @return List of FK constraint definitions (for inline CREATE TABLE)
      */
     private List<String> generateForeignKeyConstraints(String tableName, TransformationModel model, DatabaseTypeEnum targetDb) {
         List<String> fkConstraints = new ArrayList<>();
@@ -163,12 +151,12 @@ public class DDLGenerator {
             }
 
             String fkConstraint = String.format(
-                "CONSTRAINT fk_%s_%s FOREIGN KEY (%s) REFERENCES %s(%s)",
-                relation.getForeignTable(),
-                relation.getForeignColumn(),
-                dialectLoader.escapeIdentifier(relation.getForeignColumn(), targetDb),
-                dialectLoader.escapeIdentifier(relation.getPrimaryTable(), targetDb),
-                dialectLoader.escapeIdentifier(relation.getPrimaryColumn(), targetDb)
+                    "CONSTRAINT fk_%s_%s FOREIGN KEY (%s) REFERENCES %s(%s)",
+                    relation.getForeignTable(),
+                    relation.getForeignColumn(),
+                    dialectLoader.escapeIdentifier(relation.getForeignColumn(), targetDb),
+                    dialectLoader.escapeIdentifier(relation.getPrimaryTable(), targetDb),
+                    dialectLoader.escapeIdentifier(relation.getPrimaryColumn(), targetDb)
             );
 
             fkConstraints.add(fkConstraint);

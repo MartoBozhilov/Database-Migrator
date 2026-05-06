@@ -13,6 +13,9 @@ import com.database_migrator.domain.connector.repository.ConnectorRepository;
 import com.database_migrator.domain.scan.repository.SystemScanRepository;
 import com.database_migrator.domain.transformation.repository.TransformationModelRepository;
 import com.database_migrator.domain.common.util.SecurityUtils;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
+import com.database_migrator.domain.common.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,10 +43,11 @@ public class SystemScanService {
 
         Connector connector = connectorRepository
                 .findByIdAndCreatedBy_Organization_Id(request.getSourceConnectorId(), orgId)
-                .orElseThrow(() -> new RuntimeException("Source connector not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Connector", request.getSourceConnectorId()));
 
         if (connector.getConnectorType() != ConnectorTypeEnum.SOURCE) {
-            throw new RuntimeException("System scan can only be performed on SOURCE connectors");
+            throw new ValidationException("System scan can only be performed on SOURCE connectors",
+                    List.of("Connector type must be SOURCE, found: " + connector.getConnectorType()));
         }
 
         SystemScan scan = buildSystemScanPending(request, connector, currentUser);
@@ -58,10 +62,11 @@ public class SystemScanService {
 
         SystemScan scan = scanRepository
                 .findByIdAndCreatedBy_Organization_Id(scanId, orgId)
-                .orElseThrow(() -> new RuntimeException("System scan not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("SystemScan", scanId));
 
         if (scan.getStatus() != ScanStatusEnum.PENDING) {
-            throw new RuntimeException("System scan can only be started if status is PENDING");
+            throw new BusinessRuleException("System scan can only be started if status is PENDING (current: " + scan.getStatus() + ")",
+                    "INVALID_SCAN_STATUS");
         }
 
         metadataExtractionService.extractMetadataAsync(scan.getId());
@@ -81,7 +86,7 @@ public class SystemScanService {
         Long orgId = securityUtils.getCurrentOrganizationId();
         SystemScan scan = scanRepository
                 .findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("System scan not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("SystemScan", id));
         return responseMapper.toSystemScanResponse(scan);
     }
 
@@ -89,7 +94,7 @@ public class SystemScanService {
         Long orgId = securityUtils.getCurrentOrganizationId();
         SystemScan scan = scanRepository
                 .findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("System scan not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("SystemScan", id));
         return responseMapper.toSystemScanDetailsResponse(scan);
     }
 
@@ -97,7 +102,7 @@ public class SystemScanService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         connectorRepository.findByIdAndCreatedBy_Organization_Id(connectorId, orgId)
-                .orElseThrow(() -> new RuntimeException("Connector not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Connector", connectorId));
 
         return scanRepository
                 .findBySourceConnector_IdAndCreatedBy_Organization_Id(connectorId, orgId)
@@ -111,11 +116,12 @@ public class SystemScanService {
         Long orgId = securityUtils.getCurrentOrganizationId();
         SystemScan scan = scanRepository
                 .findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("System scan not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("SystemScan", id));
 
         if (transformationModelRepository.existsBySystemScan_Id(scan.getId())) {
-            throw new RuntimeException("Cannot delete scan '" + scan.getName() +
-                    "' because it has associated transformation models. Please delete the transformation models first.");
+            throw new BusinessRuleException("Cannot delete scan '" + scan.getName() +
+                    "' because it has associated transformation models. Please delete the transformation models first.",
+                    "SCAN_IN_USE");
         }
 
         scanRepository.delete(scan);

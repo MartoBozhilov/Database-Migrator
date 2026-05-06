@@ -8,6 +8,7 @@ import com.database_migrator.domain.auth.repository.OrganizationRepository;
 import com.database_migrator.domain.auth.repository.UserRepository;
 import com.database_migrator.domain.auth.repository.UserRoleRepository;
 import com.database_migrator.domain.auth.service.OrganizationService;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -139,11 +140,11 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
 
         UserRole connectorRole = userRoleRepository.findByRole(UserRoleEnum.CONNECTOR_USER)
-                .orElseThrow(() -> new RuntimeException("CONNECTOR_USER role not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", "CONNECTOR_USER"));
         UserRole modelRole = userRoleRepository.findByRole(UserRoleEnum.TRANSFORMATION_MODEL_USER)
-                .orElseThrow(() -> new RuntimeException("TRANSFORMATION_MODEL_USER role not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", "TRANSFORMATION_MODEL_USER"));
         UserRole cycleRole = userRoleRepository.findByRole(UserRoleEnum.CYCLE_EXECUTION_USER)
-                .orElseThrow(() -> new RuntimeException("CYCLE_EXECUTION_USER role not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("UserRole", "CYCLE_EXECUTION_USER"));
         operationUser.getRoles().add(connectorRole);
         operationUser.getRoles().add(modelRole);
         operationUser.getRoles().add(cycleRole);

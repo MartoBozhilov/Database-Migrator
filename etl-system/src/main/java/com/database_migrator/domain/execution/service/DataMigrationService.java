@@ -9,32 +9,32 @@ import com.database_migrator.domain.transformation.model.ColumnTransformationTyp
 import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
 import com.database_migrator.domain.common.util.TransformationUtils;
 import com.database_migrator.domain.transformation.service.TypeResolutionService;
+import com.database_migrator.domain.common.exception.ExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.sql.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Data Migration Service
- *
  * Copies data from source to target with transformations in batches
  * Uses DatabaseDialectLoader for extensible database-specific syntax
- *
- * Features:
- * - Batched data copy (1000 rows per batch)
- * - Database-specific SELECT pagination
- * - Column transformations (expressions, defaults)
- * - Progress tracking
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class DataMigrationService {
 
-    private static final int BATCH_SIZE = 1000; // Rows per batch
+    private static final int BATCH_SIZE = 1000;
 
     private final TypeResolutionService typeResolutionService;
     private final DatabaseDialectLoader dialectLoader;
@@ -42,17 +42,17 @@ public class DataMigrationService {
     /**
      * Migrate data from source to target table in batches
      *
-     * @param task Task being executed
+     * @param task       Task being executed
      * @param sourceConn Source database connection
      * @param targetConn Target database connection
-     * @param table Transformation table
+     * @param table      Transformation table
      * @return Total rows migrated
      */
     public long migrateTableData(Task task, Connection sourceConn, Connection targetConn,
                                  TransformationTable table) throws SQLException {
 
         DatabaseTypeEnum sourceDb = task.getCycle().getTransformationModel().getSystemScan()
-            .getSourceConnector().getDatabaseType();
+                .getSourceConnector().getDatabaseType();
         DatabaseTypeEnum targetDb = task.getCycle().getTargetConnector().getDatabaseType();
 
         String sourceTableName = table.getSourceTableMetadata().getTableName();
@@ -111,7 +111,7 @@ public class DataMigrationService {
                 task.setRowsProcessed(totalRows);
 
                 log.info("Task {}: Migrated {} rows (total: {})",
-                    task.getId(), batch.size(), totalRows);
+                        task.getId(), batch.size(), totalRows);
 
                 // Move to next batch
                 offset += BATCH_SIZE;
@@ -131,18 +131,18 @@ public class DataMigrationService {
      * Build SELECT statement with database-specific pagination (via dialect configuration)
      */
     private String buildSelectStatement(String tableName, List<ColumnMapping> columnMappings,
-                                       DatabaseTypeEnum sourceDb, int offset, int limit) {
+                                        DatabaseTypeEnum sourceDb, int offset, int limit) {
 
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT ");
 
         // Column list (all source columns)
         List<String> sourceColumns = columnMappings.stream()
-            .map(m -> dialectLoader.escapeIdentifier(m.getSourceColumn(), sourceDb))
-            .collect(Collectors.toList());
+                .map(m -> dialectLoader.escapeIdentifier(m.getSourceColumn(), sourceDb))
+                .collect(Collectors.toList());
 
         if (sourceColumns.isEmpty()) {
-            throw new RuntimeException("No source columns to select");
+            throw new ExecutionException("No source columns to select for table migration", null);
         }
 
         sql.append(String.join(", ", sourceColumns));
@@ -152,10 +152,10 @@ public class DataMigrationService {
         String pkColumn = null;
         if (dialectLoader.requiresOrderByForPagination(sourceDb)) {
             pkColumn = columnMappings.stream()
-                .filter(ColumnMapping::isPrimaryKey)
-                .map(ColumnMapping::getSourceColumn)
-                .findFirst()
-                .orElse(columnMappings.get(0).getSourceColumn()); // Fallback to first column
+                    .filter(ColumnMapping::isPrimaryKey)
+                    .map(ColumnMapping::getSourceColumn)
+                    .findFirst()
+                    .orElse(columnMappings.getFirst().getSourceColumn()); // Fallback to first column
         }
 
         // Build pagination clause using dialect configuration
@@ -169,7 +169,7 @@ public class DataMigrationService {
      * Build INSERT statement for target
      */
     private String buildInsertStatement(String tableName, List<ColumnMapping> columnMappings,
-                                       DatabaseTypeEnum targetDb) {
+                                        DatabaseTypeEnum targetDb) {
 
         StringBuilder sql = new StringBuilder();
         sql.append("INSERT INTO ").append(dialectLoader.escapeIdentifier(tableName, targetDb));
@@ -177,15 +177,15 @@ public class DataMigrationService {
 
         // Target column names
         sql.append(columnMappings.stream()
-            .map(m -> dialectLoader.escapeIdentifier(m.getTargetColumn(), targetDb))
-            .collect(Collectors.joining(", ")));
+                .map(m -> dialectLoader.escapeIdentifier(m.getTargetColumn(), targetDb))
+                .collect(Collectors.joining(", ")));
 
         sql.append(") VALUES (");
 
         // Placeholders
         sql.append(columnMappings.stream()
-            .map(m -> "?")
-            .collect(Collectors.joining(", ")));
+                .map(m -> "?")
+                .collect(Collectors.joining(", ")));
 
         sql.append(")");
 
@@ -230,7 +230,7 @@ public class DataMigrationService {
     private String getDefaultValue(TransformationColumn column) {
         for (ColumnTransformationAssignment assignment : column.getAssignments()) {
             if (assignment.getTransformationType() == ColumnTransformationType.CHANGE_TYPE ||
-                assignment.getTransformationType() == ColumnTransformationType.ADD_COLUMN) {
+                    assignment.getTransformationType() == ColumnTransformationType.ADD_COLUMN) {
 
                 String defaultValue = assignment.getDefaultValue();
                 if (defaultValue != null && !defaultValue.isEmpty()) {
@@ -245,8 +245,8 @@ public class DataMigrationService {
      * Apply transformations to row and set INSERT statement parameters
      */
     private void applyTransformationsAndInsert(Map<String, Object> row,
-                                              List<ColumnMapping> columnMappings,
-                                              PreparedStatement insertStmt) throws SQLException {
+                                               List<ColumnMapping> columnMappings,
+                                               PreparedStatement insertStmt) throws SQLException {
 
         for (int i = 0; i < columnMappings.size(); i++) {
             ColumnMapping mapping = columnMappings.get(i);

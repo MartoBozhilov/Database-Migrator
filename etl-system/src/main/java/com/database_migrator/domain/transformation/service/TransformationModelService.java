@@ -25,6 +25,9 @@ import com.database_migrator.domain.scan.repository.SystemScanRepository;
 import com.database_migrator.domain.transformation.repository.TransformationModelRepository;
 import com.database_migrator.domain.common.util.SecurityUtils;
 import com.database_migrator.domain.execution.service.DAGBuilder;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
+import com.database_migrator.domain.common.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,25 +56,25 @@ public class TransformationModelService {
         Long orgId = securityUtils.getCurrentOrganizationId();
         User currentUser = securityUtils.getCurrentUser();
 
-        // Check duplicate name within organization
         if (modelRepository.existsByNameAndCreatedBy_Organization_Id(request.getName(), orgId)) {
-            throw new RuntimeException("Transformation model with name '" + request.getName() + "' already exists in your organization");
+            throw new ValidationException("Transformation model with name '" + request.getName() + "' already exists in your organization",
+                    List.of("Duplicate transformation model name: " + request.getName()));
         }
 
-        // Verify SystemScan exists, belongs to org, and is COMPLETED
         SystemScan scan = scanRepository.findByIdAndCreatedBy_Organization_Id(request.getSystemScanId(), orgId)
-                .orElseThrow(() -> new RuntimeException("System scan not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("SystemScan", request.getSystemScanId()));
 
         if (scan.getStatus() != ScanStatusEnum.COMPLETED) {
-            throw new RuntimeException("System scan must be in COMPLETED status. Current status: " + scan.getStatus());
+            throw new BusinessRuleException("System scan must be in COMPLETED status. Current status: " + scan.getStatus(),
+                    "SCAN_NOT_COMPLETED");
         }
 
-        // Verify target connector exists, belongs to org, and is TARGET type
         Connector targetConnector = connectorRepository.findByIdAndCreatedBy_Organization_Id(request.getTargetConnectorId(), orgId)
-                .orElseThrow(() -> new RuntimeException("Target connector not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Connector", request.getTargetConnectorId()));
 
         if (targetConnector.getConnectorType() != ConnectorTypeEnum.TARGET) {
-            throw new RuntimeException("Connector must be of type TARGET. Current type: " + targetConnector.getConnectorType());
+            throw new ValidationException("Connector must be of type TARGET. Current type: " + targetConnector.getConnectorType(),
+                    List.of("Expected connector type: TARGET, found: " + targetConnector.getConnectorType()));
         }
 
         TransformationModel model = buildTransformationModel(request.getName(), currentUser, scan, targetConnector);
@@ -97,7 +100,7 @@ public class TransformationModelService {
     public TransformationModelResponse findById(Long id) {
         Long orgId = securityUtils.getCurrentOrganizationId();
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", id));
         return responseMapper.toTransformationModelResponse(model);
     }
 
@@ -105,7 +108,7 @@ public class TransformationModelService {
     public TransformationModelDetailsResponse getDetails(Long id) {
         Long orgId = securityUtils.getCurrentOrganizationId();
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", id));
         return responseMapper.toTransformationModelDetailsResponse(model);
     }
 
@@ -114,14 +117,14 @@ public class TransformationModelService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", id));
 
         validateModelNotConfirmed(model);
 
-        // Check name uniqueness (only if name is different)
         if (!request.getName().equals(model.getName())) {
             if (modelRepository.existsByNameAndCreatedBy_Organization_Id(request.getName(), orgId)) {
-                throw new RuntimeException("Transformation model with name '" + request.getName() + "' already exists in your organization");
+                throw new ValidationException("Transformation model with name '" + request.getName() + "' already exists in your organization",
+                        List.of("Duplicate transformation model name: " + request.getName()));
             }
             model.setName(request.getName());
         }
@@ -135,10 +138,11 @@ public class TransformationModelService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", id));
 
         if (cycleRepository.existsByTransformationModel_Id(id)) {
-            throw new RuntimeException("Cannot delete transformation model - it is used by execution cycles");
+            throw new BusinessRuleException("Cannot delete transformation model - it is used by execution cycles",
+                    "TRANSFORMATION_MODEL_IN_USE");
         }
 
         modelRepository.delete(model);
@@ -149,10 +153,11 @@ public class TransformationModelService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", id));
 
         if (model.getIsConfirmed()) {
-            throw new RuntimeException("Transformation model is already confirmed");
+            throw new BusinessRuleException("Transformation model is already confirmed",
+                    "TRANSFORMATION_MODEL_ALREADY_CONFIRMED");
         }
 
         // Validate model (DAG check)
@@ -160,7 +165,7 @@ public class TransformationModelService {
 
         if (!validationErrors.isEmpty()) {
             String errorMessage = "Transformation model validation failed:\n" + String.join("\n", validationErrors);
-            throw new RuntimeException(errorMessage);
+            throw new ValidationException(errorMessage, validationErrors);
         }
 
         model.setIsConfirmed(true);
@@ -173,7 +178,6 @@ public class TransformationModelService {
         // Build dependency graph
         Map<String, Set<String>> graph = dagBuilder.buildDependencyGraph(model);
 
-        // Find cycle paths
         List<String> cyclePaths = dagBuilder.findCyclePaths(graph);
 
         return cyclePaths.stream()

@@ -1,6 +1,8 @@
 package com.database_migrator.config.database;
 
 import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
+import com.database_migrator.domain.common.exception.ExecutionException;
+import com.database_migrator.domain.common.exception.ValidationException;
 import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -43,7 +45,7 @@ public class TypeMappingLoader {
             log.debug("Loaded type mapping for {} -> {}", sourceDb, targetDb);
         } catch (IOException e) {
             log.error("Failed to load type mapping for {} -> {} from {}", sourceDb, targetDb, resourcePath, e);
-            throw new RuntimeException("Failed to load type mapping configuration", e);
+            throw new ExecutionException("Failed to load type mapping configuration", e);
         }
     }
 
@@ -51,7 +53,8 @@ public class TypeMappingLoader {
         String key = buildKey(sourceDb, targetDb);
         TypeMappingConfig config = typeMappings.get(key);
         if (config == null) {
-            throw new RuntimeException("No type mapping found for " + sourceDb + " -> " + targetDb);
+            throw new ValidationException("No type mapping found for " + sourceDb + " -> " + targetDb,
+                    List.of("Missing type mapping configuration"));
         }
         return config;
     }
@@ -69,24 +72,6 @@ public class TypeMappingLoader {
                 .anyMatch(mapping -> mapping.getTargetType().equalsIgnoreCase(targetType));
     }
 
-    public TypeMapping getTypeMappingDetails(String sourceType, DatabaseTypeEnum sourceDb,
-                                             String targetType, DatabaseTypeEnum targetDb) {
-        TypeMappingConfig config = getMapping(sourceDb, targetDb);
-        List<TypeMapping> allowedMappings = config.getMappings().get(sourceType.toUpperCase());
-
-        if (allowedMappings == null) {
-            return null;
-        }
-
-        return allowedMappings.stream()
-                .filter(mapping -> mapping.getTargetType().equalsIgnoreCase(targetType))
-                .findFirst()
-                .orElse(null);
-    }
-
-    /**
-     * Get all allowed target types for a source type
-     */
     public List<TypeMapping> getAllowedTargetTypes(String sourceType, DatabaseTypeEnum sourceDb,
                                                    DatabaseTypeEnum targetDb) {
         // Same database - return source type as mapping
@@ -103,12 +88,6 @@ public class TypeMappingLoader {
         return config.getMappings().getOrDefault(normalizedSourceType, List.of());
     }
 
-    /**
-     * Check if a type is valid for the target database.
-     * This validates that the type exists in ANY source->target mapping for the target DB.
-     * <p>
-     * Used for ADD_COLUMN and ADD_TABLE to ensure user-provided type exists in target database.
-     */
     public boolean isValidTargetType(String targetType, DatabaseTypeEnum targetDb) {
         String normalizedTargetType = normalizeType(targetType);
 
@@ -146,9 +125,6 @@ public class TypeMappingLoader {
         return false;
     }
 
-    /**
-     * Normalize type name for lookup (uppercase, trim, extract base type)
-     */
     private String normalizeType(String type) {
         if (type == null) {
             return null;

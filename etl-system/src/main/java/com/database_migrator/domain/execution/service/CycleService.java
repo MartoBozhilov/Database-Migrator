@@ -17,6 +17,10 @@ import com.database_migrator.domain.execution.repository.TaskRepository;
 import com.database_migrator.domain.transformation.repository.TransformationModelRepository;
 import com.database_migrator.domain.common.util.SecurityUtils;
 import com.database_migrator.domain.common.util.TransformationUtils;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
+import com.database_migrator.domain.common.exception.ValidationException;
+import com.database_migrator.domain.common.exception.ExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,7 +45,6 @@ public class CycleService {
     private final SecurityUtils securityUtils;
     private final ResponseMapper responseMapper;
 
-    // Execution services
     private final PreExecutionValidator preExecutionValidator;
     private final DAGBuilder dagBuilder;
     private final AsyncCycleExecutor asyncCycleExecutor;
@@ -54,15 +57,17 @@ public class CycleService {
         log.info("Creating cycle '{}' for organization {}", request.getName(), orgId);
 
         if (cycleRepository.existsByNameAndCreatedBy_Organization_Id(request.getName(), orgId)) {
-            throw new RuntimeException("Cycle with name '" + request.getName() + "' already exists");
+            throw new ValidationException("Cycle with name '" + request.getName() + "' already exists",
+                    List.of("Duplicate cycle name: " + request.getName()));
         }
 
         TransformationModel model = transformationModelRepository
                 .findByIdAndCreatedBy_Organization_Id(request.getTransformationModelId(), orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", request.getTransformationModelId()));
 
         if (!model.getIsConfirmed()) {
-            throw new RuntimeException("Transformation model must be confirmed before creating a cycle");
+            throw new BusinessRuleException("Transformation model must be confirmed before creating a cycle",
+                    "TRANSFORMATION_MODEL_NOT_CONFIRMED");
         }
 
         log.info("Building cycle entity");
@@ -76,7 +81,7 @@ public class CycleService {
             log.info("Tasks created successfully for cycle {}", cycle.getId());
         } catch (Exception e) {
             log.error("Failed to create tasks from DAG for cycle {}: {}", cycle.getId(), e.getMessage(), e);
-            throw new RuntimeException("Failed to create tasks: " + e.getMessage(), e);
+            throw new ExecutionException("Failed to create tasks: " + e.getMessage(), e);
         }
 
         log.info("Cycle {} created with {} tasks", cycle.getId(), cycle.getTasks().size());
@@ -87,7 +92,7 @@ public class CycleService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         Cycle cycle = cycleRepository.findByIdAndCreatedBy_Organization_Id(cycleId, orgId)
-                .orElseThrow(() -> new RuntimeException("Cycle not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cycle", cycleId));
 
         return preExecutionValidator.validateCycle(cycle);
     }
@@ -97,10 +102,11 @@ public class CycleService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         Cycle cycle = cycleRepository.findByIdAndCreatedBy_Organization_Id(cycleId, orgId)
-                .orElseThrow(() -> new RuntimeException("Cycle not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cycle", cycleId));
 
         if (cycle.getStatus() != CycleStatusEnum.CREATED) {
-            throw new RuntimeException("Cycle must be in CREATED status to execute (current: " + cycle.getStatus() + ")");
+            throw new BusinessRuleException("Cycle must be in CREATED status to execute (current: " + cycle.getStatus() + ")",
+                    "INVALID_CYCLE_STATUS");
         }
 
         log.info("Cycle {}: Validating and starting execution", cycle.getId());
@@ -111,7 +117,7 @@ public class CycleService {
             cycle.setErrorMessage("Pre-execution validation failed: " + validation.getErrorMessages());
             cycleRepository.save(cycle);
 
-            throw new RuntimeException("Pre-execution validation failed: " + validation.getErrorMessages());
+            throw new ExecutionException("Pre-execution validation failed: " + validation.getErrorMessages(), null);
         }
 
         // Mark cycle as running
@@ -135,14 +141,14 @@ public class CycleService {
     public CycleResponse findById(Long id) {
         Long orgId = securityUtils.getCurrentOrganizationId();
         Cycle cycle = cycleRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Cycle not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cycle", id));
         return responseMapper.toCycleResponse(cycle);
     }
 
     public CycleDetailsResponse getDetails(Long id) {
         Long orgId = securityUtils.getCurrentOrganizationId();
         Cycle cycle = cycleRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Cycle not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cycle", id));
         return responseMapper.toCycleDetailsResponse(cycle);
     }
 
@@ -150,10 +156,10 @@ public class CycleService {
     public void delete(Long id) {
         Long orgId = securityUtils.getCurrentOrganizationId();
         Cycle cycle = cycleRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
-                .orElseThrow(() -> new RuntimeException("Cycle not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cycle", id));
 
         if (cycle.getStatus() == CycleStatusEnum.RUNNING) {
-            throw new RuntimeException("Cannot delete running cycle");
+            throw new BusinessRuleException("Cannot delete running cycle", "CYCLE_RUNNING");
         }
 
         cycleRepository.delete(cycle);

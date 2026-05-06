@@ -15,14 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * DAG (Directed Acyclic Graph) Builder
- *
- * Builds dependency graph from transformation model foreign key relations
- * Used for:
- * 1. Cycle detection (pre-execution validation)
- * 2. Task scheduling (execution order)
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -31,9 +23,8 @@ public class DAGBuilder {
     /**
      * Build task dependency graph from transformation model
      *
-     * @param model Transformation model with tables and relations
-     * @return Map<tableName, Set<dependsOnTableNames>>
-     *         e.g., {"orders" -> ["users", "products"], "users" -> []}
+     * @return Map<tableName, Set < dependsOnTableNames>>
+     * e.g., {"orders" -> ["users", "products"], "users" -> []}
      */
     public Map<String, Set<String>> buildDependencyGraph(TransformationModel model) {
         Map<String, Set<String>> graph = new HashMap<>();
@@ -70,9 +61,6 @@ public class DAGBuilder {
 
     /**
      * Validate graph is acyclic using DFS
-     *
-     * @param graph Dependency graph
-     * @return true if graph has NO cycles (is acyclic), false if cycles exist
      */
     public boolean hasNoCycles(Map<String, Set<String>> graph) {
         Set<String> visited = new HashSet<>();
@@ -87,14 +75,11 @@ public class DAGBuilder {
             }
         }
 
-        return true; // No cycles (acyclic graph)
+        return true; // (acyclic graph)
     }
 
     /**
      * Detect cycles and return cycle paths for detailed error messages
-     *
-     * @param graph Dependency graph
-     * @return List of cycle paths (empty if no cycles)
      */
     public List<String> findCyclePaths(Map<String, Set<String>> graph) {
         List<String> cyclePaths = new ArrayList<>();
@@ -131,24 +116,18 @@ public class DAGBuilder {
                 // Cycle detected - build path string
                 currentPath.add(neighbor);
                 cyclePaths.add(String.join(" -> ", currentPath));
-                currentPath.remove(currentPath.size() - 1);
+                currentPath.removeLast();
                 return true;
             }
         }
 
         recursionStack.remove(node);
-        currentPath.remove(currentPath.size() - 1);
+        currentPath.removeLast();
         return false;
     }
 
     /**
      * DFS cycle detection with recursion stack
-     *
-     * @param node Current node
-     * @param graph Dependency graph
-     * @param visited Visited nodes (across all DFS paths)
-     * @param recursionStack Current path (recursion stack)
-     * @return true if cycle detected, false otherwise
      */
     private boolean hasCycleDFS(String node, Map<String, Set<String>> graph,
                                 Set<String> visited, Set<String> recursionStack) {
@@ -163,7 +142,7 @@ public class DAGBuilder {
                     return true; // Cycle found in recursive call
                 }
             } else if (recursionStack.contains(dependency)) {
-                // Back edge found - cycle detected!
+                // Back edge found - cycle detected
                 log.warn("Cycle detected: {} -> {}", node, dependency);
                 return true;
             }
@@ -174,12 +153,6 @@ public class DAGBuilder {
         return false;
     }
 
-    /**
-     * Get list of included (non-excluded) table names from transformation model
-     *
-     * @param model Transformation model
-     * @return Set of table names to be migrated
-     */
     private Set<String> getIncludedTables(TransformationModel model) {
         Set<String> tables = new HashSet<>();
 

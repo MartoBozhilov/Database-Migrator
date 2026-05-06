@@ -1,6 +1,8 @@
 package com.database_migrator.config.database;
 
 import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
+import com.database_migrator.domain.common.exception.ExecutionException;
+import com.database_migrator.domain.common.exception.ValidationException;
 import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -10,6 +12,7 @@ import jakarta.annotation.PostConstruct;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -38,14 +41,15 @@ public class MetadataQueryLoader {
             log.debug("Loaded query config for {}", dbType);
         } catch (IOException e) {
             log.error("Failed to load query config for {} from {}", dbType, resourcePath, e);
-            throw new RuntimeException("Failed to load metadata query configuration", e);
+            throw new ExecutionException("Failed to load metadata query configuration", e);
         }
     }
 
     public MetadataQueryConfig getQueryConfig(DatabaseTypeEnum dbType) {
         MetadataQueryConfig config = queryConfigs.get(dbType);
         if (config == null) {
-            throw new RuntimeException("No query configuration found for database type: " + dbType);
+            throw new ValidationException("No query configuration found for database type: " + dbType,
+                    List.of("Missing metadata query configuration for: " + dbType));
         }
         return config;
     }

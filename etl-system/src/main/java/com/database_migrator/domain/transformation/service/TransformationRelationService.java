@@ -8,12 +8,16 @@ import com.database_migrator.domain.transformation.model.TransformationRelation;
 import com.database_migrator.domain.transformation.repository.TransformationModelRepository;
 import com.database_migrator.domain.transformation.repository.TransformationRelationRepository;
 import com.database_migrator.domain.common.util.SecurityUtils;
+import com.database_migrator.domain.common.exception.ResourceNotFoundException;
+import com.database_migrator.domain.common.exception.BusinessRuleException;
+import com.database_migrator.domain.common.exception.ValidationException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -37,7 +41,7 @@ public class TransformationRelationService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
@@ -55,11 +59,12 @@ public class TransformationRelationService {
                 .findFirst();
 
         if (existing.isPresent()) {
-            throw new RuntimeException("Relation already exists between " + request.getForeignTable() + "." +
-                    request.getForeignColumn() + " and " + request.getPrimaryTable() + "." + request.getPrimaryColumn());
+            throw new ValidationException("Relation already exists between " + request.getForeignTable() + "." +
+                    request.getForeignColumn() + " and " + request.getPrimaryTable() + "." + request.getPrimaryColumn(),
+                    List.of("Duplicate relation"));
         }
 
-        createRelation(model, request);
+        relationRepository.save(createRelation(model, request));
 
         return getModelDetailsResponse(modelId, orgId);
     }
@@ -69,15 +74,16 @@ public class TransformationRelationService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
         TransformationRelation relation = relationRepository.findById(relationId)
-                .orElseThrow(() -> new RuntimeException("Relation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationRelation", relationId));
 
         if (!relation.getTransformationModel().getId().equals(modelId)) {
-            throw new RuntimeException("Relation does not belong to this transformation model");
+            throw new BusinessRuleException("Relation does not belong to this transformation model",
+                    "RELATION_MODEL_MISMATCH");
         }
 
         // Soft delete relation
@@ -90,14 +96,14 @@ public class TransformationRelationService {
     private TransformationRelation createRelation(TransformationModel model, RelationAddRequest request) {
         TransformationRelation relation = new TransformationRelation();
         relation.setTransformationModel(model);
-        relation.setSourceRelationMetadata(null); // User-created relation
+        relation.setSourceRelationMetadata(null);
         relation.setIsDeleted(false);
         relation.setForeignTable(request.getForeignTable());
         relation.setForeignColumn(request.getForeignColumn());
         relation.setPrimaryTable(request.getPrimaryTable());
         relation.setPrimaryColumn(request.getPrimaryColumn());
 
-        return relationRepository.save(relation);
+        return relation;
     }
 
     private void validateTableExists(TransformationModel model, String tableName, String tableType) {
@@ -106,7 +112,8 @@ public class TransformationRelationService {
                         && !isTableDeleted(table));
 
         if (!exists) {
-            throw new RuntimeException(tableType + " '" + tableName + "' not found in transformation model");
+            throw new ValidationException(tableType + " '" + tableName + "' not found in transformation model",
+                    List.of("Table not found: " + tableName));
         }
     }
 
@@ -114,7 +121,7 @@ public class TransformationRelationService {
         entityManager.flush();
         entityManager.clear();
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new RuntimeException("Transformation model not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
         return responseMapper.toTransformationModelDetailsResponse(model);
     }
 }
