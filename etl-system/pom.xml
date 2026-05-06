@@ -8,11 +8,11 @@
 		<version>4.0.4</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.db-migrator</groupId>
-	<artifactId>etl-system</artifactId>
+	<groupId>com.databasemigrator</groupId>
+	<artifactId>database-migrator</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
+	<name>database-migrator</name>
+	<description>Database Migration System</description>
 	<url/>
 	<licenses>
 		<license/>

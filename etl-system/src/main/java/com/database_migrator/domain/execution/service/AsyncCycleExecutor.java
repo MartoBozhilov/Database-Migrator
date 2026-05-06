@@ -1,0 +1,89 @@
+package com.database_migrator.domain.execution.service;
+
+import com.database_migrator.domain.execution.model.Cycle;
+import com.database_migrator.domain.execution.model.Task;
+import com.database_migrator.domain.execution.model.CycleStatusEnum;
+import com.database_migrator.domain.execution.model.TaskStatusEnum;
+import com.database_migrator.domain.execution.repository.CycleRepository;
+import com.database_migrator.domain.execution.repository.TaskRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Date;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Async Cycle Executor Service
+ * Handles asynchronous execution of migration cycles
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AsyncCycleExecutor {
+
+    private final CycleRepository cycleRepository;
+    private final TaskRepository taskRepository;
+    private final TaskScheduler taskScheduler;
+    private final ParallelExecutionService parallelExecutionService;
+    private final TaskExecutor taskExecutor;
+
+    /**
+     * Execute cycle asynchronously in background thread
+     */
+    @Async("cycleExecutionTaskExecutor")
+    @Transactional
+    public void executeAsync(Long cycleId) {
+        log.info("Cycle {}: Starting async execution in background thread", cycleId);
+
+        // Fetch cycle with tasks eagerly loaded
+        Cycle cycle = cycleRepository.findById(cycleId)
+                .orElseThrow(() -> new RuntimeException("Cycle not found: " + cycleId));
+
+        try {
+            // Build task graph
+            Map<Task, Set<Task>> taskGraph = taskScheduler.buildTaskGraph(cycle);
+
+            // Compute execution batches based on dependencies
+            Deque<List<Task>> taskBatches = taskScheduler.computeExecutionBatches(taskGraph);
+
+            log.info("Cycle {}: Executing {} batches", cycle.getId(), taskBatches.size());
+
+            // Execute batches in parallel (tasks within batch run concurrently)
+            parallelExecutionService.executeBatches(taskBatches, cycle, taskExecutor);
+
+            // Check if all tasks completed successfully (fetch fresh from DB)
+            List<Task> tasks = taskRepository.findByCycle_Id(cycle.getId());
+            long failedCount = tasks.stream()
+                    .filter(t -> t.getStatus() == TaskStatusEnum.FAILED)
+                    .count();
+
+            if (failedCount > 0) {
+                cycle.setStatus(CycleStatusEnum.FAILED);
+                cycle.setErrorMessage(failedCount + " task(s) failed. Check task logs for details.");
+            } else {
+                cycle.setStatus(CycleStatusEnum.COMPLETED);
+            }
+
+            cycle.setCompletedAt(new Date());
+            cycleRepository.save(cycle);
+
+            log.info("Cycle {}: Execution completed with status {}", cycle.getId(), cycle.getStatus());
+
+        } catch (Exception e) {
+            log.error("Cycle {}: Execution failed: {}", cycle.getId(), e.getMessage(), e);
+
+            cycle.setStatus(CycleStatusEnum.FAILED);
+            cycle.setCompletedAt(new Date());
+            cycle.setErrorMessage("Execution failed: " + e.getMessage());
+            cycleRepository.save(cycle);
+
+            throw new RuntimeException("Cycle execution failed: " + e.getMessage(), e);
+        }
+    }
+}
