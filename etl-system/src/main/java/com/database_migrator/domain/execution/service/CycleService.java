@@ -120,10 +120,9 @@ public class CycleService {
             throw new ExecutionException("Pre-execution validation failed: " + validation.getErrorMessages(), null);
         }
 
-        // Mark cycle as running
         cycle.setStatus(CycleStatusEnum.RUNNING);
         cycle.setStartedAt(new Date());
-        cycleRepository.save(cycle);
+        cycle = cycleRepository.saveAndFlush(cycle); // Flush to ensure DB commit before async call
 
         log.info("Cycle {}: Marked as RUNNING, triggering async execution", cycle.getId());
 
