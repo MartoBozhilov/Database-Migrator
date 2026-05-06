@@ -5,11 +5,8 @@ import com.database_migrator.domain.connector.model.Connector;
 import com.database_migrator.domain.execution.model.Cycle;
 import com.database_migrator.domain.scan.model.SystemScan;
 import com.database_migrator.domain.transformation.model.TransformationModel;
-import com.database_migrator.domain.transformation.model.TransformationTable;
-import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
 import com.database_migrator.domain.scan.model.ScanStatusEnum;
 import com.database_migrator.config.database.MetadataQueryLoader;
-import com.database_migrator.domain.common.util.TransformationUtils;
 import com.database_migrator.domain.common.util.DatabaseConnectionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,9 +16,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -75,7 +69,7 @@ public class PreExecutionValidator {
 
         // Validate target schema is empty (only if target connection is valid)
         if (!targetValidation.hasErrors()) {
-            ValidationResult schemaValidation = validateTargetSchemaEmpty(targetConnector, model);
+            ValidationResult schemaValidation = validateTargetSchemaEmpty(targetConnector);
             if (schemaValidation.hasErrors()) {
                 result.addError("Target schema validation failed: " + schemaValidation.getErrorMessages());
             }
@@ -123,28 +117,19 @@ public class PreExecutionValidator {
         return result;
     }
 
-    public ValidationResult validateTargetSchemaEmpty(Connector targetConnector, TransformationModel model) {
+    public ValidationResult validateTargetSchemaEmpty(Connector targetConnector) {
         ValidationResult result = new ValidationResult(true);
 
         try {
             Connection conn = connectionManager.createConnection(targetConnector);
 
             try {
-                Set<String> tablesToCreate = getIncludedTableNames(model);
+                int tableCount = getTablesCount(conn, targetConnector);
 
-                // Check if any of these tables already exist in target
-                List<String> existingTables = new ArrayList<>();
-
-                for (String tableName : tablesToCreate) {
-                    if (tableExists(conn, tableName, targetConnector.getDatabaseType())) {
-                        existingTables.add(tableName);
-                    }
-                }
-
-                if (!existingTables.isEmpty()) {
-                    result.addError("Target database already contains " + existingTables.size() +
-                            " table(s) that will be created: " + String.join(", ", existingTables) +
-                            ". Target database must be empty before migration.");
+                if (tableCount > 0) {
+                    result.addError("Target database must be completely empty. " +
+                            "Found " + tableCount + " existing table(s). " +
+                            "Please use an empty database for migration.");
                 }
 
             } finally {
@@ -160,42 +145,22 @@ public class PreExecutionValidator {
         return result;
     }
 
-    private boolean tableExists(Connection conn, String tableName, DatabaseTypeEnum dbType) {
-        try {
-            // Get database-specific table existence query
-            String query = metadataQueryLoader.getQueryConfig(dbType).getTableExistsQuery();
+    private int getTablesCount(Connection conn, Connector connector) throws SQLException {
+        String query = metadataQueryLoader.getQueryConfig(connector.getDatabaseType())
+                .getTableCountQuery();
 
-            try (PreparedStatement stmt = conn.prepareStatement(query)) {
-                stmt.setString(1, tableName);
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, connector.getDatabaseName());
 
-                try (ResultSet rs = stmt.executeQuery()) {
-                    boolean exists = rs.next();
-                    if (exists) {
-                        log.debug("Table '{}' found in target database", tableName);
-                    }
-                    return exists;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    int count = rs.getInt(1);
+                    log.debug("Target database '{}' contains {} table(s)", connector.getDatabaseName(), count);
+                    return count;
                 }
+                return 0;
             }
-
-        } catch (SQLException e) {
-            log.error("Error checking if table '{}' exists in {} database: {}",
-                    tableName, dbType, e.getMessage());
-            return false;
         }
     }
 
-    private Set<String> getIncludedTableNames(TransformationModel model) {
-        Set<String> tableNames = new HashSet<>();
-
-        for (TransformationTable table : model.getTransformationTables()) {
-            if (!TransformationUtils.isTableDeleted(table)) {
-                String tableName = TransformationUtils.getEffectiveTableName(table);
-                if (tableName != null) {
-                    tableNames.add(tableName);
-                }
-            }
-        }
-
-        return tableNames;
-    }
 }

@@ -14,5 +14,5 @@ public class MetadataQueryConfig {
     private DatabaseTypeEnum databaseType;
     private String tablesAndColumnsQuery;
     private String relationshipsQuery;
-    private String tableExistsQuery;
+    private String tableCountQuery;
 }
