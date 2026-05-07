@@ -17,7 +17,6 @@ import java.util.regex.Pattern;
 
 /**
  * Service for validating SQL identifiers (table names, column names)
- * - Validates against database-specific reserved keywords
  */
 @Service
 @Slf4j

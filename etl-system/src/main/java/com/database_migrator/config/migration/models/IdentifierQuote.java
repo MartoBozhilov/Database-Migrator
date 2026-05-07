@@ -1,4 +1,4 @@
-package com.database_migrator.config.database;
+package com.database_migrator.config.migration.models;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

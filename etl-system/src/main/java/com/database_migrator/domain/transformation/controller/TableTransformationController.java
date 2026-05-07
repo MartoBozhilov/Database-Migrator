@@ -20,11 +20,6 @@ public class TableTransformationController {
 
     private final TransformationTableService tableService;
 
-    /**
-     * ADD_TABLE - Add a new user-created table (not from scan)
-     * POST /api/transformation-models/{modelId}/tables/add
-     * Body: { "tableName": "my_new_table", "idGenerationStrategy": "AUTO_INCREMENT", "idColumnName": "audit_id" }
-     */
     @PostMapping("/add")
     @PreAuthorize("hasAnyRole('ADMIN', 'MIGRATION_ADMIN', 'TRANSFORMATION_MODEL_USER')")
     public ResponseEntity<TransformationModelDetailsResponse> addTable(
@@ -34,11 +29,6 @@ public class TableTransformationController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * RENAME_TABLE - Rename a table
-     * POST /api/transformation-models/{modelId}/tables/{tableId}/rename
-     * Body: { "newName": "new_table_name" }
-     */
     @PostMapping("/{tableId}/rename")
     @PreAuthorize("hasAnyRole('ADMIN', 'MIGRATION_ADMIN', 'TRANSFORMATION_MODEL_USER')")
     public ResponseEntity<TransformationModelDetailsResponse> renameTable(
@@ -49,10 +39,6 @@ public class TableTransformationController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * DELETE_TABLE - Mark table as deleted (soft delete)
-     * POST /api/transformation-models/{modelId}/tables/{tableId}/delete
-     */
     @PostMapping("/{tableId}/delete")
     @PreAuthorize("hasAnyRole('ADMIN', 'MIGRATION_ADMIN', 'TRANSFORMATION_MODEL_USER')")
     public ResponseEntity<TransformationModelDetailsResponse> deleteTable(

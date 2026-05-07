@@ -22,6 +22,7 @@ public class ColumnTransformationAssignmentResponse {
     private String dataType;
     private Boolean isNullable;
     private Boolean isPrimaryKey;
+    private String defaultValue;
 
     // For CHANGE_TYPE
     private String targetDataType;

@@ -1,5 +1,7 @@
-package com.database_migrator.config.database;
+package com.database_migrator.config.migration.loaders;
 
+import com.database_migrator.config.migration.models.TypeMapping;
+import com.database_migrator.config.migration.models.TypeMappingConfig;
 import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
 import com.database_migrator.domain.common.exception.ExecutionException;
 import com.database_migrator.domain.common.exception.ValidationException;
@@ -61,15 +63,20 @@ public class TypeMappingLoader {
 
     public boolean isValidTypeConversion(String sourceType, DatabaseTypeEnum sourceDb,
                                          String targetType, DatabaseTypeEnum targetDb) {
+
+        if (sourceDb == targetDb) {
+            return isValidTargetType(targetType, targetDb);
+        }
+
         TypeMappingConfig config = getMapping(sourceDb, targetDb);
-        List<TypeMapping> allowedMappings = config.getMappings().get(sourceType.toUpperCase());
+        List<TypeMapping> allowedMappings = config.getMappings().get(normalizeType(sourceType));
 
         if (allowedMappings == null || allowedMappings.isEmpty()) {
             return false;
         }
 
         return allowedMappings.stream()
-                .anyMatch(mapping -> mapping.getTargetType().equalsIgnoreCase(targetType));
+                .anyMatch(mapping -> normalizeType(mapping.getTargetType()).equals(normalizeType(targetType)));
     }
 
     public List<TypeMapping> getAllowedTargetTypes(String sourceType, DatabaseTypeEnum sourceDb,

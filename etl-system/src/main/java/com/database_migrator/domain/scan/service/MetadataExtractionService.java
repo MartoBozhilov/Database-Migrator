@@ -1,6 +1,7 @@
 package com.database_migrator.domain.scan.service;
 
-import com.database_migrator.config.database.MetadataQueryConfig;
+import com.database_migrator.config.migration.loaders.MetadataQueryLoader;
+import com.database_migrator.config.migration.models.MetadataQueryConfig;
 import com.database_migrator.domain.connector.model.Connector;
 import com.database_migrator.domain.scan.model.ColumnMetadata;
 import com.database_migrator.domain.scan.model.RelationMetadata;
@@ -11,7 +12,6 @@ import com.database_migrator.domain.scan.repository.ColumnMetadataRepository;
 import com.database_migrator.domain.scan.repository.RelationMetadataRepository;
 import com.database_migrator.domain.scan.repository.SystemScanRepository;
 import com.database_migrator.domain.scan.repository.TableMetadataRepository;
-import com.database_migrator.config.database.MetadataQueryLoader;
 import com.database_migrator.domain.common.util.DatabaseConnectionManager;
 import com.database_migrator.domain.common.exception.ResourceNotFoundException;
 import com.database_migrator.domain.common.exception.ExecutionException;

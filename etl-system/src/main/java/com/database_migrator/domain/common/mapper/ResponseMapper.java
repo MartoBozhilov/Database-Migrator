@@ -336,6 +336,7 @@ public class ResponseMapper {
         response.setDataType(trans.getDataType());
         response.setIsNullable(trans.getIsNullable());
         response.setIsPrimaryKey(trans.getIsPrimaryKey());
+        response.setDefaultValue(trans.getDefaultValue());
 
         // CHANGE_TYPE
         response.setTargetDataType(trans.getTargetDataType());

@@ -1,4 +1,4 @@
-package com.database_migrator.config.database;
+package com.database_migrator.config.migration.models;
 
 import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
 import lombok.AllArgsConstructor;

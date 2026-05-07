@@ -1,5 +1,6 @@
 package com.database_migrator.domain.execution.service;
 
+import com.database_migrator.config.migration.loaders.DatabaseDialectLoader;
 import com.database_migrator.domain.transformation.model.ColumnTransformationAssignment;
 import com.database_migrator.domain.transformation.model.TransformationColumn;
 import com.database_migrator.domain.transformation.model.TransformationTable;
@@ -50,6 +51,13 @@ public class DataMigrationService {
      */
     public long migrateTableData(Task task, Connection sourceConn, Connection targetConn,
                                  TransformationTable table) throws SQLException {
+
+        // User-added tables (ADD_TABLE) have no source data to migrate
+        if (table.getSourceTableMetadata() == null) {
+            log.info("Task {}: Skipping data migration for user-added table {}",
+                    task.getId(), TransformationUtils.getEffectiveTableName(table));
+            return 0;
+        }
 
         DatabaseTypeEnum sourceDb = task.getCycle().getTransformationModel().getSystemScan()
                 .getSourceConnector().getDatabaseType();
@@ -203,6 +211,13 @@ public class DataMigrationService {
                 continue; // Skip excluded columns
             }
 
+            // Skip user-added columns (ADD_COLUMN) - they have no source data
+            if (column.getSourceColumnMetadata() == null) {
+                log.debug("Skipping user-added column {} (no source data)",
+                        TransformationUtils.getEffectiveColumnName(column));
+                continue;
+            }
+
             ColumnMapping mapping = new ColumnMapping();
             mapping.setSourceColumn(column.getSourceColumnMetadata().getColumnName());
             mapping.setTargetColumn(TransformationUtils.getEffectiveColumnName(column));
@@ -210,8 +225,7 @@ public class DataMigrationService {
             mapping.setTargetType(typeResolutionService.getEffectiveColumnType(column));
 
             // Get primary key info from metadata
-            boolean isPrimaryKey = column.getSourceColumnMetadata() != null &&
-                    Boolean.TRUE.equals(column.getSourceColumnMetadata().getIsPrimaryKey());
+            boolean isPrimaryKey = Boolean.TRUE.equals(column.getSourceColumnMetadata().getIsPrimaryKey());
             mapping.setPrimaryKey(isPrimaryKey);
 
             // Check for default value

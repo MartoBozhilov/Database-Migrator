@@ -1,7 +1,7 @@
-package com.database_migrator.domain.execution.service;
+package com.database_migrator.config.migration.loaders;
 
-import com.database_migrator.config.database.DatabaseDialectConfig;
-import com.database_migrator.config.database.PaginationConfig;
+import com.database_migrator.config.migration.models.DatabaseDialectConfig;
+import com.database_migrator.config.migration.models.PaginationConfig;
 import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
 import com.database_migrator.domain.common.exception.ExecutionException;
 import com.database_migrator.domain.common.exception.ValidationException;

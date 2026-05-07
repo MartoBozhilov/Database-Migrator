@@ -35,23 +35,22 @@ public class TransformationModelController {
         return ResponseEntity.ok(response);
     }
 
-    // Get all transformation models for current organization
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MIGRATION_ADMIN', 'TRANSFORMATION_MODEL_USER')")
     public ResponseEntity<List<TransformationModelResponse>> getAllModels() {
+        // Get all transformation models for current organization
         List<TransformationModelResponse> models = modelService.findAll();
         return ResponseEntity.ok(models);
     }
 
-    // Get transformation model by ID (basic info)
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MIGRATION_ADMIN', 'TRANSFORMATION_MODEL_USER')")
     public ResponseEntity<TransformationModelResponse> getModel(@PathVariable Long id) {
+        // Get transformation model by ID (basic info)
         TransformationModelResponse response = modelService.findById(id);
         return ResponseEntity.ok(response);
     }
 
-    // Get transformation model details (with all tables, columns, relations)
     @GetMapping("/{id}/details")
     @PreAuthorize("hasAnyRole('ADMIN', 'MIGRATION_ADMIN', 'TRANSFORMATION_MODEL_USER')")
     public ResponseEntity<TransformationModelDetailsResponse> getModelDetails(@PathVariable Long id) {

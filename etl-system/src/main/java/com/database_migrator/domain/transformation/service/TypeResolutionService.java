@@ -1,13 +1,13 @@
 package com.database_migrator.domain.transformation.service;
 
-import com.database_migrator.config.database.TypeMapping;
+import com.database_migrator.config.migration.loaders.TypeMappingLoader;
+import com.database_migrator.config.migration.models.TypeMapping;
 import com.database_migrator.domain.transformation.model.ColumnTransformationAssignment;
 import com.database_migrator.domain.transformation.model.TransformationColumn;
 import com.database_migrator.domain.transformation.model.TransformationModel;
 import com.database_migrator.domain.transformation.model.TransformationTable;
 import com.database_migrator.domain.transformation.model.ColumnTransformationType;
 import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
-import com.database_migrator.config.database.TypeMappingLoader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,9 +22,6 @@ public class TypeResolutionService {
 
     private final TypeMappingLoader typeMappingLoader;
 
-    /**
-     * Auto-resolve target types for all columns in a transformation model.
-     */
     public void autoResolveAllColumnTypes(TransformationModel model) {
         DatabaseTypeEnum sourceDb = model.getSystemScan().getSourceConnector().getDatabaseType();
         DatabaseTypeEnum targetDb = model.getTargetConnector().getDatabaseType();
@@ -49,13 +46,31 @@ public class TypeResolutionService {
         log.info("Resolved {} column types for model {}", resolvedCount, model.getId());
     }
 
-    /**
-     * Resolve target type for a single column.
-     */
-    public String resolveColumnType(TransformationColumn column,
-                                    DatabaseTypeEnum sourceDb,
-                                    DatabaseTypeEnum targetDb,
-                                    boolean isCrossDatabase) {
+    public String resolveAddColumnType(String dataType) {
+        // For ADD_COLUMN, user explicitly specifies the type
+        // Already verified by TypeMappingLoader -> isValidTargetType
+        return dataType;
+    }
+
+    public String getEffectiveColumnType(TransformationColumn column) {
+        if (column.getResolvedTargetType() != null) {
+            return column.getResolvedTargetType();
+        }
+
+        // Fallback to source type (same-db, no transformation)
+        if (column.getSourceColumnMetadata() != null) {
+            return column.getSourceColumnMetadata().getDataType();
+        }
+
+        // ADD_COLUMN without resolved type (shouldn't happen)
+        log.warn("Column {} has no resolved type and no source metadata", column.getId());
+        return "VARCHAR(255)"; // Emergency fallback
+    }
+
+    private String resolveColumnType(TransformationColumn column,
+                                     DatabaseTypeEnum sourceDb,
+                                     DatabaseTypeEnum targetDb,
+                                     boolean isCrossDatabase) {
 
         // ADD_COLUMN: resolvedTargetType already set when column created
         if (column.getSourceColumnMetadata() == null) {
@@ -91,7 +106,7 @@ public class TypeResolutionService {
             return resolveCrossDatabaseType(sourceType, sourceDb, targetDb);
         }
 
-        // Same-database, no CHANGE_TYPE: leave NULL (use source type in Phase 5)
+        // Same-database, no CHANGE_TYPE: leave NULL
         return null;
     }
 
@@ -127,45 +142,5 @@ public class TypeResolutionService {
             log.error("Failed to resolve type {} {} → {}", sourceDb, sourceType, targetDb, e);
             return sourceType; // Fallback: keep source type
         }
-    }
-
-    /**
-     * Resolve type for a newly added column (ADD_COLUMN transformation).
-     * This is called when user creates ADD_COLUMN assignment.
-     */
-    public String resolveAddColumnType(String dataType) {
-        // For ADD_COLUMN, user explicitly specifies the type
-        return dataType;
-    }
-
-    /**
-     * Get effective column type
-     */
-    public String getEffectiveColumnType(TransformationColumn column) {
-        if (column.getResolvedTargetType() != null) {
-            return column.getResolvedTargetType();
-        }
-
-        // Fallback to source type (same-db, no transformation)
-        if (column.getSourceColumnMetadata() != null) {
-            String dataType = column.getSourceColumnMetadata().getDataType();
-
-            // Quick fix: If VARCHAR/CHAR without length, add default length
-            if (dataType.equalsIgnoreCase("varchar") || dataType.equalsIgnoreCase("char")) {
-                return dataType + "(255)";
-            }
-            if (dataType.toLowerCase().startsWith("varchar") && !dataType.contains("(")) {
-                return "varchar(255)";
-            }
-            if (dataType.toLowerCase().startsWith("char") && !dataType.contains("(")) {
-                return "char(255)";
-            }
-
-            return dataType;
-        }
-
-        // ADD_COLUMN without resolved type (shouldn't happen)
-        log.warn("Column {} has no resolved type and no source metadata", column.getId());
-        return "VARCHAR(255)"; // Emergency fallback
     }
 }

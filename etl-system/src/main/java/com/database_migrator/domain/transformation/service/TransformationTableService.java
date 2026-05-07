@@ -1,5 +1,6 @@
 package com.database_migrator.domain.transformation.service;
 
+import com.database_migrator.config.migration.loaders.TypeMappingLoader;
 import com.database_migrator.domain.transformation.dto.TableTransformationRequest;
 import com.database_migrator.domain.transformation.dto.TransformationModelDetailsResponse;
 import com.database_migrator.domain.common.mapper.ResponseMapper;
@@ -18,7 +19,6 @@ import com.database_migrator.domain.transformation.repository.TransformationMode
 import com.database_migrator.domain.transformation.repository.TransformationRelationRepository;
 import com.database_migrator.domain.transformation.repository.TransformationTableRepository;
 import com.database_migrator.domain.common.util.SecurityUtils;
-import com.database_migrator.config.database.TypeMappingLoader;
 import com.database_migrator.domain.common.exception.ResourceNotFoundException;
 import com.database_migrator.domain.common.exception.BusinessRuleException;
 import com.database_migrator.domain.common.exception.ValidationException;
@@ -58,7 +58,7 @@ public class TransformationTableService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new com.database_migrator.domain.common.exception.ResourceNotFoundException("TransformationModel", modelId));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
@@ -66,13 +66,11 @@ public class TransformationTableService {
 
         validateTableName(newName, model);
 
-        // Check for duplicate table name (excluding current table)
         checkDuplicateTableName(newName, model, tableId);
 
         // Get current table name before renaming
         String oldTableName = getEffectiveTableName(table);
 
-        // Find or create RENAME_TABLE assignment
         TableTransformationAssignment assignment = findOrCreateAssignment(table, TableTransformationType.RENAME_TABLE);
         assignment.setNewName(newName);
         assignmentRepository.save(assignment);
@@ -90,7 +88,7 @@ public class TransformationTableService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new com.database_migrator.domain.common.exception.ResourceNotFoundException("TransformationModel", modelId));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
@@ -113,19 +111,17 @@ public class TransformationTableService {
         Long orgId = securityUtils.getCurrentOrganizationId();
 
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new com.database_migrator.domain.common.exception.ResourceNotFoundException("TransformationModel", modelId));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
 
         validateModelNotConfirmed(model);
 
         TransformationTable table = getTableAndValidateOwnership(tableId, modelId);
 
-        // Get actual table name (check for RENAME_TABLE assignment first)
         String tableName = getEffectiveTableName(table);
 
         // Check if table has active relationships
         checkTableRelationships(model.getId(), tableName);
 
-        // Find or create DELETE_TABLE assignment
         TableTransformationAssignment assignment = findOrCreateAssignment(table, TableTransformationType.DELETE_TABLE);
         assignmentRepository.save(assignment);
 
@@ -169,13 +165,11 @@ public class TransformationTableService {
     }
 
     private TransformationTable createNewTable(TransformationModel model, TableTransformationRequest request) {
-        // Create new TransformationTable (sourceTableMetadata = null for user-created tables)
         TransformationTable table = new TransformationTable();
         table.setTransformationModel(model);
         table.setSourceTableMetadata(null);
         TransformationTable savedTable = tableRepository.save(table);
 
-        // Create ADD_TABLE assignment
         TableTransformationAssignment assignment = new TableTransformationAssignment();
         assignment.setTransformationTable(savedTable);
         assignment.setTransformationType(TableTransformationType.ADD_TABLE);
@@ -261,34 +255,33 @@ public class TransformationTableService {
             errorMessage.append("Cannot delete table '").append(tableName)
                     .append("' because it has ").append(relations.size())
                     .append(" active foreign key relationship(s). ");
-            errorMessage.append("Please delete the following relationship(s) first:\n\n");
+            errorMessage.append("Please delete the following relationship(s) first: ");
 
             // Show foreign key relationships (this table references other tables)
             if (!foreignKeyRelations.isEmpty()) {
-                errorMessage.append("Foreign Key Relationships (this table references others):\n");
+                errorMessage.append("Foreign Key Relationships (this table references others): ");
                 for (TransformationRelation relation : foreignKeyRelations) {
-                    errorMessage.append("  - Column '")
+                    errorMessage.append("Column '")
                             .append(relation.getForeignColumn())
                             .append("' references ")
                             .append(relation.getPrimaryTable())
                             .append(".")
                             .append(relation.getPrimaryColumn())
-                            .append("\n");
+                            .append("; ");
                 }
-                errorMessage.append("\n");
             }
 
             // Show primary key relationships (other tables reference this table)
             if (!primaryKeyRelations.isEmpty()) {
-                errorMessage.append("Primary Key Relationships (other tables reference this table):\n");
+                errorMessage.append("Primary Key Relationships (other tables reference this table): ");
                 for (TransformationRelation relation : primaryKeyRelations) {
-                    errorMessage.append("  - Column '")
+                    errorMessage.append("Column '")
                             .append(relation.getPrimaryColumn())
                             .append("' is referenced by ")
                             .append(relation.getForeignTable())
                             .append(".")
                             .append(relation.getForeignColumn())
-                            .append("\n");
+                            .append("; ");
                 }
             }
 
@@ -351,7 +344,7 @@ public class TransformationTableService {
         entityManager.flush(); // Ensure all changes are persisted
         entityManager.clear(); // Clear persistence context to force reload
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
-                .orElseThrow(() -> new com.database_migrator.domain.common.exception.ResourceNotFoundException("TransformationModel", modelId));
+                .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
         return responseMapper.toTransformationModelDetailsResponse(model);
     }
 }

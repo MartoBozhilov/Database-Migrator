@@ -1,5 +1,6 @@
-package com.database_migrator.config.database;
+package com.database_migrator.config.migration.loaders;
 
+import com.database_migrator.config.migration.models.MetadataQueryConfig;
 import com.database_migrator.domain.connector.model.DatabaseTypeEnum;
 import com.database_migrator.domain.common.exception.ExecutionException;
 import com.database_migrator.domain.common.exception.ValidationException;

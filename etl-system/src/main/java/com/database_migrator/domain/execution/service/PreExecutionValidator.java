@@ -6,7 +6,7 @@ import com.database_migrator.domain.execution.model.Cycle;
 import com.database_migrator.domain.scan.model.SystemScan;
 import com.database_migrator.domain.transformation.model.TransformationModel;
 import com.database_migrator.domain.scan.model.ScanStatusEnum;
-import com.database_migrator.config.database.MetadataQueryLoader;
+import com.database_migrator.config.migration.loaders.MetadataQueryLoader;
 import com.database_migrator.domain.common.util.DatabaseConnectionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

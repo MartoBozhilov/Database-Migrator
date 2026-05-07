@@ -22,7 +22,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.database_migrator.domain.common.util.TransformationUtils.getEffectiveTableName;
+import static com.database_migrator.domain.common.util.TransformationUtils.getEffectiveColumnName;
 import static com.database_migrator.domain.common.util.TransformationUtils.isTableDeleted;
+import static com.database_migrator.domain.common.util.TransformationUtils.isColumnDeleted;
 import static com.database_migrator.domain.common.util.TransformationUtils.validateModelNotConfirmed;
 
 @Slf4j
@@ -45,9 +47,11 @@ public class TransformationRelationService {
 
         validateModelNotConfirmed(model);
 
-        // Validate tables exist in transformation model
         validateTableExists(model, request.getForeignTable(), "Foreign table");
         validateTableExists(model, request.getPrimaryTable(), "Primary table");
+
+        validateColumnExists(model, request.getForeignTable(), request.getForeignColumn(), "Foreign column");
+        validateColumnExists(model, request.getPrimaryTable(), request.getPrimaryColumn(), "Primary column");
 
         // Check if relation already exists
         Optional<TransformationRelation> existing = model.getTransformationRelations().stream()
@@ -114,6 +118,25 @@ public class TransformationRelationService {
         if (!exists) {
             throw new ValidationException(tableType + " '" + tableName + "' not found in transformation model",
                     List.of("Table not found: " + tableName));
+        }
+    }
+
+    private void validateColumnExists(TransformationModel model, String tableName, String columnName, String columnType) {
+        var table = model.getTransformationTables().stream()
+                .filter(t -> Objects.requireNonNull(getEffectiveTableName(t)).equalsIgnoreCase(tableName))
+                .filter(t -> !isTableDeleted(t))
+                .findFirst()
+                .orElseThrow(() -> new ValidationException("Table '" + tableName + "' not found",
+                        List.of("Table not found")));
+
+        // Check if column exists in the table
+        boolean columnExists = table.getColumns().stream()
+                .anyMatch(column -> Objects.requireNonNull(getEffectiveColumnName(column)).equalsIgnoreCase(columnName)
+                        && !isColumnDeleted(column));
+
+        if (!columnExists) {
+            throw new ValidationException(columnType + " '" + columnName + "' not found in table '" + tableName + "'",
+                    List.of("Column not found: " + columnName + " in table " + tableName));
         }
     }
 

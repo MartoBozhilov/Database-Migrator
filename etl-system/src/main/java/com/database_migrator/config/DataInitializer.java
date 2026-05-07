@@ -1,4 +1,4 @@
-package com.database_migrator.config.database;
+package com.database_migrator.config;
 
 import com.database_migrator.domain.auth.model.Organization;
 import com.database_migrator.domain.auth.model.User;
