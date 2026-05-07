@@ -46,7 +46,7 @@ public class SystemScanService {
                 .orElseThrow(() -> new ResourceNotFoundException("Connector", request.getSourceConnectorId()));
 
         if (connector.getConnectorType() != ConnectorTypeEnum.SOURCE) {
-            throw new ValidationException("System scan can only be performed on SOURCE connectors",
+            throw new ValidationException("System scan can only be created from SOURCE connectors",
                     List.of("Connector type must be SOURCE, found: " + connector.getConnectorType()));
         }
 
@@ -64,8 +64,8 @@ public class SystemScanService {
                 .findByIdAndCreatedBy_Organization_Id(scanId, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("SystemScan", scanId));
 
-        if (scan.getStatus() != ScanStatusEnum.PENDING) {
-            throw new BusinessRuleException("System scan can only be started if status is PENDING (current: " + scan.getStatus() + ")",
+        if ((scan.getStatus() != ScanStatusEnum.PENDING) && (scan.getStatus() != ScanStatusEnum.FAILED)) {
+            throw new BusinessRuleException("System scan can only be started if status is PENDING or FAILED (current: " + scan.getStatus() + ")",
                     "INVALID_SCAN_STATUS");
         }
 

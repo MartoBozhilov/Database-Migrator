@@ -7,8 +7,10 @@ import com.database_migrator.domain.connector.dto.ConnectionTestResponse;
 import com.database_migrator.domain.common.mapper.ResponseMapper;
 import com.database_migrator.domain.connector.model.Connector;
 import com.database_migrator.domain.auth.model.User;
+import com.database_migrator.domain.connector.model.ConnectorTypeEnum;
 import com.database_migrator.domain.connector.repository.ConnectorRepository;
 import com.database_migrator.domain.scan.repository.SystemScanRepository;
+import com.database_migrator.domain.transformation.repository.TransformationModelRepository;
 import com.database_migrator.domain.common.util.SecurityUtils;
 import com.database_migrator.domain.scan.service.MetadataExtractionService;
 import com.database_migrator.domain.common.exception.ResourceNotFoundException;
@@ -29,6 +31,7 @@ public class ConnectorService {
 
     private final ConnectorRepository connectorRepository;
     private final SystemScanRepository systemScanRepository;
+    private final TransformationModelRepository transformationModelRepository;
     private final SecurityUtils securityUtils;
     private final ResponseMapper responseMapper;
     private final MetadataExtractionService metadataExtractionService;
@@ -72,6 +75,8 @@ public class ConnectorService {
                 .findByIdAndCreatedBy_Organization_Id(id, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Connector", id));
 
+        isConnectorInUse(connector, "update");
+
         if (request.getName() != null) {
             if (!request.getName().equals(connector.getName()) &&
                     connectorRepository.existsByNameAndCreatedBy_Organization_Id(request.getName(), orgId)) {
@@ -114,11 +119,7 @@ public class ConnectorService {
                 .findByIdAndCreatedBy_Organization_Id(id, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Connector", id));
 
-        if (systemScanRepository.existsBySourceConnector_Id(connector.getId())) {
-            throw new BusinessRuleException("Cannot delete connector '" + connector.getName() +
-                    "' because it has associated system scans. Please delete the scans first.",
-                    "CONNECTOR_IN_USE");
-        }
+        isConnectorInUse(connector, "delete");
 
         connectorRepository.delete(connector);
     }
@@ -135,6 +136,24 @@ public class ConnectorService {
         String databaseVersion = result.get("databaseVersion");
 
         return responseMapper.toConnectionTestResponse(success, message, databaseVersion);
+    }
+
+    private void isConnectorInUse(Connector connector, String operation) {
+        if (connector.getConnectorType() == ConnectorTypeEnum.SOURCE) {
+            if (systemScanRepository.existsBySourceConnector_Id(connector.getId())) {
+                throw new BusinessRuleException(
+                        "Cannot " + operation + " SOURCE connector '" + connector.getName() +
+                                "' because it has associated system scans. Delete the scans first, or Create new Connector.",
+                        "CONNECTOR_IN_USE");
+            }
+        } else if (connector.getConnectorType() == ConnectorTypeEnum.TARGET) {
+            if (transformationModelRepository.existsByTargetConnector_Id(connector.getId())) {
+                throw new BusinessRuleException(
+                        "Cannot " + operation + " TARGET connector '" + connector.getName() +
+                                "' because it has associated transformation models. Delete the models first, or Create new Connector.",
+                        "CONNECTOR_IN_USE");
+            }
+        }
     }
 
     private Connector buildConnector(ConnectorCreateRequest request, User user) {

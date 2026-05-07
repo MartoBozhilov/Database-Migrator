@@ -113,7 +113,7 @@ public class MetadataExtractionService {
     }
 
     @Transactional
-    public void updateScanStatus(Long scanId, ScanStatusEnum status, Date startedAt, Date completedAt,
+    private void updateScanStatus(Long scanId, ScanStatusEnum status, Date startedAt, Date completedAt,
                                  String errorMessage) {
         try {
             if (status == ScanStatusEnum.RUNNING && startedAt != null) {

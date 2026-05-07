@@ -20,6 +20,8 @@ public interface TransformationModelRepository extends JpaRepository<Transformat
 
     boolean existsBySystemScan_Id(Long systemScanId);
 
+    boolean existsByTargetConnector_Id(Long targetConnectorId);
+
     @Query("SELECT DISTINCT tm FROM TransformationModel tm " +
            "LEFT JOIN FETCH tm.systemScan ss " +
            "LEFT JOIN FETCH ss.sourceConnector sc " +
