@@ -1,0 +1,261 @@
+{
+  "sourceDatabase": "POSTGRESQL",
+  "targetDatabase": "POSTGRESQL",
+  "mappings": {
+    "SMALLINT": [
+      {"targetType": "SMALLINT", "dataLossRisk": false},
+      {"targetType": "INTEGER", "dataLossRisk": false},
+      {"targetType": "BIGINT", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "INTEGER": [
+      {"targetType": "INTEGER", "dataLossRisk": false},
+      {"targetType": "BIGINT", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "SMALLINT", "dataLossRisk": true, "warning": "Data loss: INTEGER range exceeds SMALLINT"}
+    ],
+    "INT": [
+      {"targetType": "INT", "dataLossRisk": false},
+      {"targetType": "INTEGER", "dataLossRisk": false},
+      {"targetType": "BIGINT", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "SMALLINT", "dataLossRisk": true, "warning": "Data loss: INT range exceeds SMALLINT"}
+    ],
+    "BIGINT": [
+      {"targetType": "BIGINT", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "INTEGER", "dataLossRisk": true, "warning": "Data loss: BIGINT range exceeds INTEGER"},
+      {"targetType": "SMALLINT", "dataLossRisk": true, "warning": "Data loss: BIGINT range exceeds SMALLINT"}
+    ],
+    "SERIAL": [
+      {"targetType": "SERIAL", "dataLossRisk": false},
+      {"targetType": "BIGSERIAL", "dataLossRisk": false},
+      {"targetType": "INTEGER", "dataLossRisk": false},
+      {"targetType": "BIGINT", "dataLossRisk": false}
+    ],
+    "BIGSERIAL": [
+      {"targetType": "BIGSERIAL", "dataLossRisk": false},
+      {"targetType": "BIGINT", "dataLossRisk": false},
+      {"targetType": "SERIAL", "dataLossRisk": true, "warning": "Data loss: BIGSERIAL range exceeds SERIAL"},
+      {"targetType": "INTEGER", "dataLossRisk": true, "warning": "Data loss: BIGSERIAL range exceeds INTEGER"}
+    ],
+    "NUMERIC": [
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "DOUBLE PRECISION", "dataLossRisk": false},
+      {"targetType": "REAL", "dataLossRisk": true, "warning": "Data loss: precision may be reduced"},
+      {"targetType": "BIGINT", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"},
+      {"targetType": "INTEGER", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"}
+    ],
+    "DECIMAL": [
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "DOUBLE PRECISION", "dataLossRisk": false},
+      {"targetType": "REAL", "dataLossRisk": true, "warning": "Data loss: precision may be reduced"},
+      {"targetType": "BIGINT", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"},
+      {"targetType": "INTEGER", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"}
+    ],
+    "REAL": [
+      {"targetType": "REAL", "dataLossRisk": false},
+      {"targetType": "DOUBLE PRECISION", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "INTEGER", "dataLossRisk": true, "warning": "Data loss: decimal values will be truncated"}
+    ],
+    "DOUBLE PRECISION": [
+      {"targetType": "DOUBLE PRECISION", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "REAL", "dataLossRisk": true, "warning": "Data loss: precision may be reduced"},
+      {"targetType": "INTEGER", "dataLossRisk": true, "warning": "Data loss: decimal values will be truncated"}
+    ],
+    "MONEY": [
+      {"targetType": "MONEY", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "CHARACTER": [
+      {"targetType": "CHARACTER", "dataLossRisk": false},
+      {"targetType": "CHAR", "dataLossRisk": false},
+      {"targetType": "CHARACTER VARYING", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "CHAR": [
+      {"targetType": "CHAR", "dataLossRisk": false},
+      {"targetType": "CHARACTER", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "CHARACTER VARYING", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "CHARACTER VARYING": [
+      {"targetType": "CHARACTER VARYING", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "CHAR", "dataLossRisk": false},
+      {"targetType": "CHARACTER", "dataLossRisk": false}
+    ],
+    "VARCHAR": [
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "CHARACTER VARYING", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "CHAR", "dataLossRisk": false},
+      {"targetType": "INTEGER", "dataLossRisk": true, "warning": "Data loss: non-numeric values cannot be converted"},
+      {"targetType": "BIGINT", "dataLossRisk": true, "warning": "Data loss: non-numeric values cannot be converted"},
+      {"targetType": "NUMERIC", "dataLossRisk": true, "warning": "Data loss: non-numeric values cannot be converted"},
+      {"targetType": "DATE", "dataLossRisk": true, "warning": "Data loss: invalid date strings will fail"},
+      {"targetType": "TIMESTAMP", "dataLossRisk": true, "warning": "Data loss: invalid timestamp strings will fail"}
+    ],
+    "TEXT": [
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "CHARACTER VARYING", "dataLossRisk": false}
+    ],
+    "BYTEA": [
+      {"targetType": "BYTEA", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "DATE": [
+      {"targetType": "DATE", "dataLossRisk": false},
+      {"targetType": "TIMESTAMP", "dataLossRisk": false},
+      {"targetType": "TIMESTAMP WITHOUT TIME ZONE", "dataLossRisk": false},
+      {"targetType": "TIMESTAMP WITH TIME ZONE", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "TIMESTAMP": [
+      {"targetType": "TIMESTAMP", "dataLossRisk": false},
+      {"targetType": "TIMESTAMP WITHOUT TIME ZONE", "dataLossRisk": false},
+      {"targetType": "TIMESTAMP WITH TIME ZONE", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "DATE", "dataLossRisk": true, "warning": "Data loss: time component will be lost"}
+    ],
+    "TIMESTAMP WITHOUT TIME ZONE": [
+      {"targetType": "TIMESTAMP WITHOUT TIME ZONE", "dataLossRisk": false},
+      {"targetType": "TIMESTAMP", "dataLossRisk": false},
+      {"targetType": "TIMESTAMP WITH TIME ZONE", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "DATE", "dataLossRisk": true, "warning": "Data loss: time component will be lost"}
+    ],
+    "TIMESTAMP WITH TIME ZONE": [
+      {"targetType": "TIMESTAMP WITH TIME ZONE", "dataLossRisk": false},
+      {"targetType": "TIMESTAMP", "dataLossRisk": false},
+      {"targetType": "TIMESTAMP WITHOUT TIME ZONE", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "DATE", "dataLossRisk": true, "warning": "Data loss: time and timezone will be lost"}
+    ],
+    "TIME": [
+      {"targetType": "TIME", "dataLossRisk": false},
+      {"targetType": "TIME WITHOUT TIME ZONE", "dataLossRisk": false},
+      {"targetType": "TIME WITH TIME ZONE", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "TIME WITHOUT TIME ZONE": [
+      {"targetType": "TIME WITHOUT TIME ZONE", "dataLossRisk": false},
+      {"targetType": "TIME", "dataLossRisk": false},
+      {"targetType": "TIME WITH TIME ZONE", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "TIME WITH TIME ZONE": [
+      {"targetType": "TIME WITH TIME ZONE", "dataLossRisk": false},
+      {"targetType": "TIME", "dataLossRisk": false},
+      {"targetType": "TIME WITHOUT TIME ZONE", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "INTERVAL": [
+      {"targetType": "INTERVAL", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "BOOLEAN": [
+      {"targetType": "BOOLEAN", "dataLossRisk": false},
+      {"targetType": "SMALLINT", "dataLossRisk": false},
+      {"targetType": "INTEGER", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "BIT": [
+      {"targetType": "BIT", "dataLossRisk": false},
+      {"targetType": "BIT VARYING", "dataLossRisk": false},
+      {"targetType": "BOOLEAN", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false}
+    ],
+    "BIT VARYING": [
+      {"targetType": "BIT VARYING", "dataLossRisk": false},
+      {"targetType": "BIT", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "UUID": [
+      {"targetType": "UUID", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "CHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "JSON": [
+      {"targetType": "JSON", "dataLossRisk": false},
+      {"targetType": "JSONB", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": true, "warning": "Data loss: JSON may exceed VARCHAR size"}
+    ],
+    "JSONB": [
+      {"targetType": "JSONB", "dataLossRisk": false},
+      {"targetType": "JSON", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": true, "warning": "Data loss: JSONB may exceed VARCHAR size"}
+    ],
+    "XML": [
+      {"targetType": "XML", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": true, "warning": "Data loss: XML may exceed VARCHAR size"}
+    ],
+    "ARRAY": [
+      {"targetType": "ARRAY", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "JSONB", "dataLossRisk": false}
+    ],
+    "INET": [
+      {"targetType": "INET", "dataLossRisk": false},
+      {"targetType": "CIDR", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "CIDR": [
+      {"targetType": "CIDR", "dataLossRisk": false},
+      {"targetType": "INET", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "MACADDR": [
+      {"targetType": "MACADDR", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ]
+  }
+}

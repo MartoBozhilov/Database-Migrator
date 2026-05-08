@@ -32,6 +32,11 @@ public class TypeMappingLoader {
         loadTypeMapping(DatabaseTypeEnum.POSTGRESQL, DatabaseTypeEnum.MSSQL, "type-mappings/postgresql-to-mssql.json");
         loadTypeMapping(DatabaseTypeEnum.MSSQL, DatabaseTypeEnum.MYSQL, "type-mappings/mssql-to-mysql.json");
         loadTypeMapping(DatabaseTypeEnum.MSSQL, DatabaseTypeEnum.POSTGRESQL, "type-mappings/mssql-to-postgresql.json");
+
+        loadTypeMapping(DatabaseTypeEnum.MYSQL, DatabaseTypeEnum.MYSQL, "type-mappings/mysql-to-mysql.json");
+        loadTypeMapping(DatabaseTypeEnum.POSTGRESQL, DatabaseTypeEnum.POSTGRESQL, "type-mappings/postgresql-to-postgresql.json");
+        loadTypeMapping(DatabaseTypeEnum.MSSQL, DatabaseTypeEnum.MSSQL, "type-mappings/mssql-to-mssql.json");
+
         log.info("Loaded type mappings for {} database pairs", typeMappings.size());
     }
 
@@ -64,10 +69,6 @@ public class TypeMappingLoader {
     public boolean isValidTypeConversion(String sourceType, DatabaseTypeEnum sourceDb,
                                          String targetType, DatabaseTypeEnum targetDb) {
 
-        if (sourceDb == targetDb) {
-            return isValidTargetType(targetType, targetDb);
-        }
-
         TypeMappingConfig config = getMapping(sourceDb, targetDb);
         List<TypeMapping> allowedMappings = config.getMappings().get(normalizeType(sourceType));
 
@@ -81,13 +82,6 @@ public class TypeMappingLoader {
 
     public List<TypeMapping> getAllowedTargetTypes(String sourceType, DatabaseTypeEnum sourceDb,
                                                    DatabaseTypeEnum targetDb) {
-        // Same database - return source type as mapping
-        if (sourceDb == targetDb) {
-            TypeMapping sameType = new TypeMapping();
-            sameType.setTargetType(sourceType);
-            sameType.setDataLossRisk(false);
-            return List.of(sameType);
-        }
 
         TypeMappingConfig config = getMapping(sourceDb, targetDb);
         String normalizedSourceType = normalizeType(sourceType);
@@ -100,19 +94,6 @@ public class TypeMappingLoader {
 
         // Check all mappings where this database is the target
         for (DatabaseTypeEnum sourceDb : DatabaseTypeEnum.values()) {
-            if (sourceDb == targetDb) {
-                // Same database - check if type exists as a source type in any mapping
-                try {
-                    TypeMappingConfig config = getMapping(targetDb, DatabaseTypeEnum.MYSQL); // Any other db
-                    if (config.getMappings().containsKey(normalizedTargetType)) {
-                        return true;
-                    }
-                } catch (Exception e) {
-                    // Ignore, try next
-                }
-                continue;
-            }
-
             try {
                 TypeMappingConfig config = getMapping(sourceDb, targetDb);
 
@@ -130,6 +111,27 @@ public class TypeMappingLoader {
         }
 
         return false;
+    }
+
+    public String getConversionWarning(String sourceType, DatabaseTypeEnum sourceDb,
+                                       String targetType, DatabaseTypeEnum targetDb) {
+        try {
+            TypeMappingConfig config = getMapping(sourceDb, targetDb);
+            List<TypeMapping> allowedMappings = config.getMappings().get(normalizeType(sourceType));
+
+            if (allowedMappings == null || allowedMappings.isEmpty()) {
+                return null;
+            }
+
+            return allowedMappings.stream()
+                    .filter(mapping -> normalizeType(mapping.getTargetType()).equals(normalizeType(targetType)))
+                    .filter(TypeMapping::isDataLossRisk)
+                    .map(TypeMapping::getWarning)
+                    .findFirst()
+                    .orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String normalizeType(String type) {

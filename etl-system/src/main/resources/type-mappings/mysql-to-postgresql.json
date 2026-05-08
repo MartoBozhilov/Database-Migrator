@@ -4,29 +4,35 @@
   "mappings": {
     "TINYINT": [
       {"targetType": "smallint", "dataLossRisk": false},
-      {"targetType": "integer", "dataLossRisk": false}
+      {"targetType": "integer", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false}
     ],
     "SMALLINT": [
       {"targetType": "smallint", "dataLossRisk": false},
-      {"targetType": "integer", "dataLossRisk": false}
+      {"targetType": "integer", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false}
     ],
     "MEDIUMINT": [
-      {"targetType": "integer", "dataLossRisk": false}
+      {"targetType": "integer", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false}
     ],
     "INT": [
       {"targetType": "integer", "dataLossRisk": false},
-      {"targetType": "bigint", "dataLossRisk": false}
+      {"targetType": "bigint", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false}
     ],
     "INTEGER": [
       {"targetType": "integer", "dataLossRisk": false},
-      {"targetType": "bigint", "dataLossRisk": false}
+      {"targetType": "bigint", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false}
     ],
     "BIGINT": [
-      {"targetType": "bigint", "dataLossRisk": false}
+      {"targetType": "bigint", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false}
     ],
     "DECIMAL": [
-      {"targetType": "numeric", "dataLossRisk": false},
       {"targetType": "decimal", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false},
       {"targetType": "integer", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"}
     ],
     "NUMERIC": [

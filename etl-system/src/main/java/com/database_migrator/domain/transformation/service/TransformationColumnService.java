@@ -137,7 +137,12 @@ public class TransformationColumnService {
         column.setResolvedTargetType(request.getTargetDataType());
         columnRepository.save(column);
 
-        return getModelDetailsResponse(modelId, orgId);
+        String columnName = TransformationUtils.getEffectiveColumnName(column);
+
+        TransformationModelDetailsResponse response = getModelDetailsResponse(modelId, orgId);
+        addTypeConversionWarningIfNeeded(response, sourceType, sourceDb, request.getTargetDataType(), targetDb, columnName);
+
+        return response;
     }
 
     @Transactional
@@ -367,5 +372,27 @@ public class TransformationColumnService {
         TransformationModel model = modelRepository.findByIdAndCreatedBy_Organization_Id(modelId, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("TransformationModel", modelId));
         return responseMapper.toTransformationModelDetailsResponse(model);
+    }
+
+    private void addTypeConversionWarningIfNeeded(TransformationModelDetailsResponse response,
+                                                  String sourceType,
+                                                  DatabaseTypeEnum sourceDb,
+                                                  String targetType,
+                                                  DatabaseTypeEnum targetDb,
+                                                  String columnName) {
+
+        String warning = typeMappingLoader.getConversionWarning(sourceType, sourceDb, targetType, targetDb);
+        if (warning != null) {
+            com.database_migrator.domain.execution.dto.ValidationWarning validationWarning =
+                    new com.database_migrator.domain.execution.dto.ValidationWarning(
+                            "WARNING",
+                            warning,
+                            columnName
+                    );
+            if (response.getWarnings() == null) {
+                response.setWarnings(new java.util.ArrayList<>());
+            }
+            response.getWarnings().add(validationWarning);
+        }
     }
 }

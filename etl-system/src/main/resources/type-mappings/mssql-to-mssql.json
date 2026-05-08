@@ -1,0 +1,266 @@
+{
+  "sourceDatabase": "MSSQL",
+  "targetDatabase": "MSSQL",
+  "mappings": {
+    "TINYINT": [
+      {"targetType": "TINYINT", "dataLossRisk": false},
+      {"targetType": "SMALLINT", "dataLossRisk": false},
+      {"targetType": "INT", "dataLossRisk": false},
+      {"targetType": "BIGINT", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false}
+    ],
+    "SMALLINT": [
+      {"targetType": "SMALLINT", "dataLossRisk": false},
+      {"targetType": "INT", "dataLossRisk": false},
+      {"targetType": "BIGINT", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "TINYINT", "dataLossRisk": true, "warning": "Data loss: SMALLINT range exceeds TINYINT"}
+    ],
+    "INT": [
+      {"targetType": "INT", "dataLossRisk": false},
+      {"targetType": "BIGINT", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "SMALLINT", "dataLossRisk": true, "warning": "Data loss: INT range exceeds SMALLINT"},
+      {"targetType": "TINYINT", "dataLossRisk": true, "warning": "Data loss: INT range exceeds TINYINT"}
+    ],
+    "BIGINT": [
+      {"targetType": "BIGINT", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "INT", "dataLossRisk": true, "warning": "Data loss: BIGINT range exceeds INT"},
+      {"targetType": "SMALLINT", "dataLossRisk": true, "warning": "Data loss: BIGINT range exceeds SMALLINT"},
+      {"targetType": "TINYINT", "dataLossRisk": true, "warning": "Data loss: BIGINT range exceeds TINYINT"}
+    ],
+    "DECIMAL": [
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "FLOAT", "dataLossRisk": false},
+      {"targetType": "REAL", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "BIGINT", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"},
+      {"targetType": "INT", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"}
+    ],
+    "NUMERIC": [
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "FLOAT", "dataLossRisk": false},
+      {"targetType": "REAL", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "BIGINT", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"},
+      {"targetType": "INT", "dataLossRisk": true, "warning": "Data loss: decimal precision will be lost"}
+    ],
+    "MONEY": [
+      {"targetType": "MONEY", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false}
+    ],
+    "SMALLMONEY": [
+      {"targetType": "SMALLMONEY", "dataLossRisk": false},
+      {"targetType": "MONEY", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false}
+    ],
+    "FLOAT": [
+      {"targetType": "FLOAT", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "REAL", "dataLossRisk": true, "warning": "Data loss: precision may be reduced"},
+      {"targetType": "INT", "dataLossRisk": true, "warning": "Data loss: decimal values will be truncated"}
+    ],
+    "REAL": [
+      {"targetType": "REAL", "dataLossRisk": false},
+      {"targetType": "FLOAT", "dataLossRisk": false},
+      {"targetType": "DECIMAL", "dataLossRisk": false},
+      {"targetType": "NUMERIC", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "INT", "dataLossRisk": true, "warning": "Data loss: decimal values will be truncated"}
+    ],
+    "CHAR": [
+      {"targetType": "CHAR", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "NCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "NTEXT", "dataLossRisk": false}
+    ],
+    "VARCHAR": [
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "CHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "NCHAR", "dataLossRisk": false},
+      {"targetType": "NTEXT", "dataLossRisk": false},
+      {"targetType": "INT", "dataLossRisk": true, "warning": "Data loss: non-numeric values cannot be converted"},
+      {"targetType": "BIGINT", "dataLossRisk": true, "warning": "Data loss: non-numeric values cannot be converted"},
+      {"targetType": "DECIMAL", "dataLossRisk": true, "warning": "Data loss: non-numeric values cannot be converted"},
+      {"targetType": "DATE", "dataLossRisk": true, "warning": "Data loss: invalid date strings will fail"},
+      {"targetType": "DATETIME", "dataLossRisk": true, "warning": "Data loss: invalid datetime strings will fail"}
+    ],
+    "TEXT": [
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NTEXT", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "VARCHAR(MAX)", "dataLossRisk": false}
+    ],
+    "NCHAR": [
+      {"targetType": "NCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "NTEXT", "dataLossRisk": false},
+      {"targetType": "CHAR", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "NVARCHAR": [
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "NCHAR", "dataLossRisk": false},
+      {"targetType": "NTEXT", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "CHAR", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "INT", "dataLossRisk": true, "warning": "Data loss: non-numeric values cannot be converted"},
+      {"targetType": "BIGINT", "dataLossRisk": true, "warning": "Data loss: non-numeric values cannot be converted"},
+      {"targetType": "DECIMAL", "dataLossRisk": true, "warning": "Data loss: non-numeric values cannot be converted"}
+    ],
+    "NTEXT": [
+      {"targetType": "NTEXT", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR(MAX)", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "VARCHAR(MAX)", "dataLossRisk": false}
+    ],
+    "VARCHAR(MAX)": [
+      {"targetType": "VARCHAR(MAX)", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false},
+      {"targetType": "NVARCHAR(MAX)", "dataLossRisk": false},
+      {"targetType": "NTEXT", "dataLossRisk": false}
+    ],
+    "NVARCHAR(MAX)": [
+      {"targetType": "NVARCHAR(MAX)", "dataLossRisk": false},
+      {"targetType": "NTEXT", "dataLossRisk": false},
+      {"targetType": "VARCHAR(MAX)", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "BINARY": [
+      {"targetType": "BINARY", "dataLossRisk": false},
+      {"targetType": "VARBINARY", "dataLossRisk": false},
+      {"targetType": "IMAGE", "dataLossRisk": false}
+    ],
+    "VARBINARY": [
+      {"targetType": "VARBINARY", "dataLossRisk": false},
+      {"targetType": "BINARY", "dataLossRisk": false},
+      {"targetType": "IMAGE", "dataLossRisk": false},
+      {"targetType": "VARBINARY(MAX)", "dataLossRisk": false}
+    ],
+    "VARBINARY(MAX)": [
+      {"targetType": "VARBINARY(MAX)", "dataLossRisk": false},
+      {"targetType": "IMAGE", "dataLossRisk": false},
+      {"targetType": "VARBINARY", "dataLossRisk": true, "warning": "Data loss: VARBINARY(MAX) may exceed VARBINARY size"}
+    ],
+    "IMAGE": [
+      {"targetType": "IMAGE", "dataLossRisk": false},
+      {"targetType": "VARBINARY(MAX)", "dataLossRisk": false},
+      {"targetType": "VARBINARY", "dataLossRisk": true, "warning": "Data loss: IMAGE may exceed VARBINARY size"}
+    ],
+    "DATE": [
+      {"targetType": "DATE", "dataLossRisk": false},
+      {"targetType": "DATETIME", "dataLossRisk": false},
+      {"targetType": "DATETIME2", "dataLossRisk": false},
+      {"targetType": "DATETIMEOFFSET", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false}
+    ],
+    "DATETIME": [
+      {"targetType": "DATETIME", "dataLossRisk": false},
+      {"targetType": "DATETIME2", "dataLossRisk": false},
+      {"targetType": "DATETIMEOFFSET", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "DATE", "dataLossRisk": true, "warning": "Data loss: time component will be lost"}
+    ],
+    "DATETIME2": [
+      {"targetType": "DATETIME2", "dataLossRisk": false},
+      {"targetType": "DATETIMEOFFSET", "dataLossRisk": false},
+      {"targetType": "DATETIME", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "DATE", "dataLossRisk": true, "warning": "Data loss: time component will be lost"}
+    ],
+    "SMALLDATETIME": [
+      {"targetType": "SMALLDATETIME", "dataLossRisk": false},
+      {"targetType": "DATETIME", "dataLossRisk": false},
+      {"targetType": "DATETIME2", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "DATE", "dataLossRisk": true, "warning": "Data loss: time component will be lost"}
+    ],
+    "DATETIMEOFFSET": [
+      {"targetType": "DATETIMEOFFSET", "dataLossRisk": false},
+      {"targetType": "DATETIME2", "dataLossRisk": false},
+      {"targetType": "DATETIME", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false},
+      {"targetType": "DATE", "dataLossRisk": true, "warning": "Data loss: time and timezone will be lost"}
+    ],
+    "TIME": [
+      {"targetType": "TIME", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false}
+    ],
+    "BIT": [
+      {"targetType": "BIT", "dataLossRisk": false},
+      {"targetType": "TINYINT", "dataLossRisk": false},
+      {"targetType": "SMALLINT", "dataLossRisk": false},
+      {"targetType": "INT", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false}
+    ],
+    "UNIQUEIDENTIFIER": [
+      {"targetType": "UNIQUEIDENTIFIER", "dataLossRisk": false},
+      {"targetType": "CHAR", "dataLossRisk": false},
+      {"targetType": "VARCHAR", "dataLossRisk": false},
+      {"targetType": "NCHAR", "dataLossRisk": false},
+      {"targetType": "NVARCHAR", "dataLossRisk": false}
+    ],
+    "XML": [
+      {"targetType": "XML", "dataLossRisk": false},
+      {"targetType": "NVARCHAR(MAX)", "dataLossRisk": false},
+      {"targetType": "VARCHAR(MAX)", "dataLossRisk": false},
+      {"targetType": "NTEXT", "dataLossRisk": false},
+      {"targetType": "TEXT", "dataLossRisk": false}
+    ],
+    "SQL_VARIANT": [
+      {"targetType": "SQL_VARIANT", "dataLossRisk": false},
+      {"targetType": "NVARCHAR(MAX)", "dataLossRisk": false},
+      {"targetType": "VARCHAR(MAX)", "dataLossRisk": false}
+    ],
+    "GEOMETRY": [
+      {"targetType": "GEOMETRY", "dataLossRisk": false},
+      {"targetType": "VARBINARY(MAX)", "dataLossRisk": false}
+    ],
+    "GEOGRAPHY": [
+      {"targetType": "GEOGRAPHY", "dataLossRisk": false},
+      {"targetType": "VARBINARY(MAX)", "dataLossRisk": false}
+    ]
+  }
+}

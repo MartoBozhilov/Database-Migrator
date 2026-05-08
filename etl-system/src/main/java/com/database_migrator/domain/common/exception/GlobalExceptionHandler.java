@@ -1,6 +1,7 @@
 package com.database_migrator.domain.common.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -14,6 +15,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -125,6 +127,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntimeException(
             RuntimeException ex, HttpServletRequest request) {
+        log.error("RuntimeException occurred at {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         ErrorResponse error = new ErrorResponse(
                 new Date(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
@@ -138,6 +141,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(
             Exception ex, HttpServletRequest request) {
+        log.error("Unexpected exception occurred at {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         ErrorResponse error = new ErrorResponse(
                 new Date(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),

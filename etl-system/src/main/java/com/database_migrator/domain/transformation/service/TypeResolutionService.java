@@ -113,13 +113,18 @@ public class TypeResolutionService {
     /**
      * Resolve cross-database type conversion.
      * Picks the best (safest) target type from allowed options.
+     * Preserves precision and scale from source type (e.g., DECIMAL(10,2) → numeric(10,2))
      */
     private String resolveCrossDatabaseType(String sourceType,
                                             DatabaseTypeEnum sourceDb,
                                             DatabaseTypeEnum targetDb) {
         try {
+            // Extract base type and precision/scale
+            String baseSourceType = extractBaseType(sourceType);
+            String precision = extractPrecision(sourceType);
+
             List<TypeMapping> allowedTypes = typeMappingLoader
-                    .getAllowedTargetTypes(sourceType, sourceDb, targetDb);
+                    .getAllowedTargetTypes(baseSourceType, sourceDb, targetDb);
 
             if (allowedTypes.isEmpty()) {
                 log.warn("No type mapping found for {} {} → {}, keeping source type",
@@ -133,14 +138,44 @@ public class TypeResolutionService {
                     .findFirst()
                     .orElse(allowedTypes.getFirst());
 
-            log.debug("Resolved {} {} → {} {}",
-                    sourceDb, sourceType, targetDb, bestMapping.getTargetType());
+            String targetBaseType = bestMapping.getTargetType();
 
-            return bestMapping.getTargetType();
+            // Append precision to target type if it exists in source type
+            String resolvedType = (precision != null && !precision.isEmpty())
+                    ? targetBaseType + precision
+                    : targetBaseType;
+
+            log.debug("Resolved {} {} → {} {}",
+                    sourceDb, sourceType, targetDb, resolvedType);
+
+            return resolvedType;
 
         } catch (Exception e) {
             log.error("Failed to resolve type {} {} → {}", sourceDb, sourceType, targetDb, e);
             return sourceType; // Fallback: keep source type
         }
+    }
+
+    private String extractBaseType(String type) {
+        if (type == null) {
+            return null;
+        }
+        int parenIndex = type.indexOf('(');
+        if (parenIndex > 0) {
+            return type.substring(0, parenIndex).trim();
+        }
+        return type.trim();
+    }
+
+    private String extractPrecision(String type) {
+        if (type == null) {
+            return null;
+        }
+        int startParen = type.indexOf('(');
+        int endParen = type.indexOf(')');
+        if (startParen > 0 && endParen > startParen) {
+            return type.substring(startParen, endParen + 1); // Returns "(10,2)"
+        }
+        return null;
     }
 }

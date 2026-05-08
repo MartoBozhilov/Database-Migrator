@@ -4,13 +4,16 @@
   "mappings": {
     "SMALLINT": [
       {"targetType": "smallint", "dataLossRisk": false},
-      {"targetType": "int", "dataLossRisk": false}
+      {"targetType": "int", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false}
     ],
     "INTEGER": [
-      {"targetType": "int", "dataLossRisk": false}
+      {"targetType": "int", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false}
     ],
     "BIGINT": [
-      {"targetType": "bigint", "dataLossRisk": false}
+      {"targetType": "bigint", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false}
     ],
     "NUMERIC": [
       {"targetType": "decimal", "dataLossRisk": false},
@@ -81,7 +84,8 @@
     ],
     "JSONB": [
       {"targetType": "json", "dataLossRisk": false},
-      {"targetType": "longtext", "dataLossRisk": false}
+      {"targetType": "longtext", "dataLossRisk": false},
+      {"targetType": "text", "dataLossRisk": false}
     ],
     "UUID": [
       {"targetType": "char(36)", "dataLossRisk": false},
