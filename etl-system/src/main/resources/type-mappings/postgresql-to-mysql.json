@@ -2,6 +2,19 @@
   "sourceDatabase": "POSTGRESQL",
   "targetDatabase": "MYSQL",
   "mappings": {
+    "INT2": [
+      {"targetType": "smallint", "dataLossRisk": false},
+      {"targetType": "int", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false}
+    ],
+    "INT4": [
+      {"targetType": "int", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false}
+    ],
+    "INT8": [
+      {"targetType": "bigint", "dataLossRisk": false},
+      {"targetType": "decimal", "dataLossRisk": false}
+    ],
     "SMALLINT": [
       {"targetType": "smallint", "dataLossRisk": false},
       {"targetType": "int", "dataLossRisk": false},

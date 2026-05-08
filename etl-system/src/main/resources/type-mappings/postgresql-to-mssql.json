@@ -2,6 +2,15 @@
   "sourceDatabase": "POSTGRESQL",
   "targetDatabase": "MSSQL",
   "mappings": {
+    "INT2": [
+      {"targetType": "smallint", "dataLossRisk": false}
+    ],
+    "INT4": [
+      {"targetType": "int", "dataLossRisk": false}
+    ],
+    "INT8": [
+      {"targetType": "bigint", "dataLossRisk": false}
+    ],
     "SMALLINT": [
       {"targetType": "smallint", "dataLossRisk": false}
     ],
@@ -12,8 +21,8 @@
       {"targetType": "bigint", "dataLossRisk": false}
     ],
     "NUMERIC": [
-      {"targetType": "numeric", "dataLossRisk": false},
       {"targetType": "decimal", "dataLossRisk": false},
+      {"targetType": "numeric", "dataLossRisk": false},
       {"targetType": "int", "dataLossRisk": true, "warning": "Data loss: numeric precision will be lost"}
     ],
     "DECIMAL": [

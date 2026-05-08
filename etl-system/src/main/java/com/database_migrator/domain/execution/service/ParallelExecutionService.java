@@ -29,7 +29,7 @@ public class ParallelExecutionService {
 
     private final TaskRepository taskRepository;
 
-    public void executeBatches(Deque<List<Task>> taskBatches, Cycle cycle, TaskExecutor taskExecutor) {
+    public void executeBatches(Deque<List<Task>> taskBatches, Cycle cycle, TaskExecutor taskExecutor, boolean forceSequential) {
         ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
         try {
@@ -39,16 +39,17 @@ public class ParallelExecutionService {
                 List<Task> batch = taskBatches.pollFirst(); // FIFO order
                 batchNumber++;
 
-                log.info("Cycle {}: Executing batch {} with {} tasks",
-                        cycle.getId(), batchNumber, batch.size());
+                log.info("Cycle {}: Executing batch {} with {} tasks (mode: {})",
+                        cycle.getId(), batchNumber, batch.size(),
+                        forceSequential ? "SEQUENTIAL" : "PARALLEL");
 
-                // Submit all tasks in batch to thread pool
+                // Submit all tasks in batch to thread pool (or execute sequentially)
                 List<Future<?>> futures = new ArrayList<>();
 
                 for (Task task : batch) {
                     Long taskId = task.getId();  // Extract ID before passing to background thread
 
-                    futures.add(executorService.submit(() -> {
+                    Runnable taskRunnable = () -> {
                         try {
                             String tableName = TransformationUtils
                                     .getEffectiveTableName(task.getTransformationTable());
@@ -72,39 +73,62 @@ public class ParallelExecutionService {
                             // Re-throw to fail the Future
                             throw new com.database_migrator.domain.common.exception.ExecutionException("Task execution failed", e);
                         }
-                    }));
-                }
+                    };
 
-                // Wait for all tasks in batch to complete (synchronization point)
-                boolean batchFailed = false;
-                for (Future<?> future : futures) {
-                    try {
-                        future.get(); // Blocks until task completes
+                    if (forceSequential) {
+                        // Execute immediately in current thread (sequential)
+                        try {
+                            taskRunnable.run();
+                        } catch (Exception e) {
+                            log.error("Cycle {}: Sequential task {} failed", cycle.getId(), taskId);
 
-                    } catch (InterruptedException e) {
-                        log.error("Cycle {}: Task interrupted in batch {}", cycle.getId(), batchNumber);
-                        batchFailed = true;
-                        Thread.currentThread().interrupt();
+                            // Mark cycle as FAILED
+                            cycle.setStatus(CycleStatusEnum.FAILED);
+                            cycle.setErrorMessage("Task " + taskId + " failed. Check task logs for details.");
 
-                    } catch (ExecutionException e) {
-                        log.error("Cycle {}: Task failed in batch {}: {}",
-                                cycle.getId(), batchNumber, e.getCause().getMessage());
-                        batchFailed = true;
+                            // Cancel remaining tasks
+                            cancelRemainingTasks(taskBatches);
+                            return; // Exit early
+                        }
+                    } else {
+                        // Submit to thread pool (parallel)
+                        futures.add(executorService.submit(taskRunnable));
                     }
                 }
 
-                // Stop execution if batch failed (fail fast)
-                if (batchFailed) {
-                    log.error("Cycle {}: Batch {} failed, stopping execution", cycle.getId(), batchNumber);
+                // Only wait for futures if parallel execution
+                if (!forceSequential) {
+                    // Wait for all tasks in batch to complete (synchronization point)
+                    boolean batchFailed = false;
+                    for (Future<?> future : futures) {
+                        try {
+                            future.get(); // Blocks until task completes
 
-                    // Mark cycle as FAILED
-                    cycle.setStatus(CycleStatusEnum.FAILED);
-                    cycle.setErrorMessage("Batch " + batchNumber + " failed. Check task logs for details.");
+                        } catch (InterruptedException e) {
+                            log.error("Cycle {}: Task interrupted in batch {}", cycle.getId(), batchNumber);
+                            batchFailed = true;
+                            Thread.currentThread().interrupt();
 
-                    // Cancel remaining tasks
-                    cancelRemainingTasks(taskBatches);
+                        } catch (ExecutionException e) {
+                            log.error("Cycle {}: Task failed in batch {}: {}",
+                                    cycle.getId(), batchNumber, e.getCause().getMessage());
+                            batchFailed = true;
+                        }
+                    }
 
-                    break;
+                    // Stop execution if batch failed (fail fast)
+                    if (batchFailed) {
+                        log.error("Cycle {}: Batch {} failed, stopping execution", cycle.getId(), batchNumber);
+
+                        // Mark cycle as FAILED
+                        cycle.setStatus(CycleStatusEnum.FAILED);
+                        cycle.setErrorMessage("Batch " + batchNumber + " failed. Check task logs for details.");
+
+                        // Cancel remaining tasks
+                        cancelRemainingTasks(taskBatches);
+
+                        break;
+                    }
                 }
 
                 log.info("Cycle {}: Batch {} completed successfully", cycle.getId(), batchNumber);

@@ -49,8 +49,17 @@ public class AsyncCycleExecutor {
 
             log.info("Cycle {}: Executing {} batches", cycle.getId(), taskBatches.size());
 
-            // Execute batches in parallel (tasks within batch run concurrently)
-            parallelExecutionService.executeBatches(taskBatches, cycle, taskExecutor);
+            // Check if target is MSSQL - force sequential execution due to IDENTITY_INSERT limitation
+            // MSSQL only allows ONE table to have IDENTITY_INSERT ON at a time (database-wide lock)
+            boolean isMssqlTarget = cycle.getTargetConnector().getDatabaseType().name().equals("MSSQL");
+
+            if (isMssqlTarget) {
+                log.warn("Cycle {}: Target is MSSQL - forcing SEQUENTIAL execution due to IDENTITY_INSERT limitation (only one table can have IDENTITY_INSERT ON at a time)",
+                        cycle.getId());
+            }
+
+            // Execute batches (parallel for MySQL/PostgreSQL, sequential for MSSQL)
+            parallelExecutionService.executeBatches(taskBatches, cycle, taskExecutor, isMssqlTarget);
 
             // Check if all tasks completed successfully (fetch fresh from DB)
             List<Task> tasks = taskRepository.findByCycle_Id(cycle.getId());

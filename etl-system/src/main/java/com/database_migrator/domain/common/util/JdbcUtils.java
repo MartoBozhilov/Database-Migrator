@@ -10,11 +10,18 @@ public final class JdbcUtils {
     }
 
     public static String buildJdbcUrl(String host, Integer port, String database, DatabaseTypeEnum dbType) {
-        return String.format("jdbc:%s://%s:%d/%s",
-                dbType.name().toLowerCase(),
-                host,
-                port,
-                database);
+        return switch (dbType) {
+            case MSSQL ->
+                    String.format("jdbc:sqlserver://%s:%d;databaseName=%s;encrypt=true;trustServerCertificate=true",
+                            host, port, database);
+            case MYSQL ->
+                    String.format("jdbc:mysql://%s:%d/%s?useSSL=true&requireSSL=true&verifyServerCertificate=false",
+                            host, port, database);
+            case POSTGRESQL ->
+                // TODO enable ssl on local postgres server
+                    String.format("jdbc:postgresql://%s:%d/%s?sslmode=prefer",
+                            host, port, database);
+        };
     }
 
     public static String buildJdbcUrl(Connector connector) {

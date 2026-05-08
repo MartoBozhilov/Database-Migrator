@@ -80,6 +80,16 @@ public class DataMigrationService {
         // Prepare INSERT statement
         String insertSQL = buildInsertStatement(targetTableName, columnMappings, targetDb);
 
+        // Check if table has auto-increment columns (for MSSQL IDENTITY_INSERT)
+        boolean hasAutoIncrement = hasAutoIncrementColumn(table);
+        log.info("Task {}: Table {} has auto-increment columns: {}", task.getId(), targetTableName, hasAutoIncrement);
+
+        // Enable IDENTITY_INSERT for MSSQL if table has auto-increment columns
+        if (targetDb == DatabaseTypeEnum.MSSQL && hasAutoIncrement) {
+            log.info("Task {}: Enabling IDENTITY_INSERT for MSSQL table {}", task.getId(), targetTableName);
+            enableIdentityInsert(targetConn, targetTableName, targetDb);
+        }
+
         try (PreparedStatement insertStmt = targetConn.prepareStatement(insertSQL)) {
 
             while (true) {
@@ -129,6 +139,12 @@ public class DataMigrationService {
                     break;
                 }
             }
+        }
+
+        // Disable IDENTITY_INSERT for MSSQL AFTER PreparedStatement closes and all batches committed
+        // MUST be outside try-with-resources to ensure batch execution completes
+        if (targetDb == DatabaseTypeEnum.MSSQL && hasAutoIncrement) {
+            disableIdentityInsert(targetConn, targetTableName, targetDb);
         }
 
         log.info("Task {}: Migration completed. Total rows: {}", task.getId(), totalRows);
@@ -275,6 +291,39 @@ public class DataMigrationService {
 
             // Type conversion if needed (JDBC handles most conversions automatically)
             insertStmt.setObject(i + 1, value);
+        }
+    }
+
+    private boolean hasAutoIncrementColumn(TransformationTable table) {
+        for (TransformationColumn column : table.getColumns()) {
+            if (TransformationUtils.isColumnDeleted(column)) {
+                continue;
+            }
+            if (column.getSourceColumnMetadata() != null &&
+                    Boolean.TRUE.equals(column.getSourceColumnMetadata().getIsAutoIncrement())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void enableIdentityInsert(Connection conn, String tableName, DatabaseTypeEnum targetDb) {
+        try (java.sql.Statement stmt = conn.createStatement()) {
+            String sql = "SET IDENTITY_INSERT " + dialectLoader.escapeIdentifier(tableName, targetDb) + " ON";
+            stmt.execute(sql);
+            log.info("Enabled IDENTITY_INSERT for table {}", tableName);
+        } catch (SQLException e) {
+            log.error("Failed to enable IDENTITY_INSERT for table {}: {}", tableName, e.getMessage());
+        }
+    }
+
+    private void disableIdentityInsert(Connection conn, String tableName, DatabaseTypeEnum targetDb) {
+        try (java.sql.Statement stmt = conn.createStatement()) {
+            String sql = "SET IDENTITY_INSERT " + dialectLoader.escapeIdentifier(tableName, targetDb) + " OFF";
+            stmt.execute(sql);
+            log.info("Disabled IDENTITY_INSERT for table {}", tableName);
+        } catch (SQLException e) {
+            log.error("Failed to disable IDENTITY_INSERT for table {}: {}", tableName, e.getMessage());
         }
     }
 }
