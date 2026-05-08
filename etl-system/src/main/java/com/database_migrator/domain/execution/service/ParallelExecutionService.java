@@ -4,12 +4,14 @@ import com.database_migrator.domain.execution.model.Cycle;
 import com.database_migrator.domain.execution.model.Task;
 import com.database_migrator.domain.execution.model.CycleStatusEnum;
 import com.database_migrator.domain.execution.model.TaskStatusEnum;
+import com.database_migrator.domain.execution.repository.TaskRepository;
 import com.database_migrator.domain.common.util.TransformationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -24,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 public class ParallelExecutionService {
 
     private static final int THREAD_POOL_SIZE = 10;
+
+    private final TaskRepository taskRepository;
 
     public void executeBatches(Deque<List<Task>> taskBatches, Cycle cycle, TaskExecutor taskExecutor) {
         ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
@@ -121,19 +125,21 @@ public class ParallelExecutionService {
     }
 
     private void cancelRemainingTasks(Deque<List<Task>> remainingBatches) {
-        int cancelledCount = 0;
+        List<Task> tasksToCancel = new ArrayList<>();
 
         while (!remainingBatches.isEmpty()) {
             List<Task> batch = remainingBatches.pollFirst();
             for (Task task : batch) {
                 task.setStatus(TaskStatusEnum.FAILED);
                 task.setErrorMessage("Cancelled due to previous batch failure");
-                cancelledCount++;
+                task.setCompletedAt(new Date());
+                tasksToCancel.add(task);
             }
         }
 
-        if (cancelledCount > 0) {
-            log.warn("Cancelled {} remaining tasks", cancelledCount);
+        if (!tasksToCancel.isEmpty()) {
+            taskRepository.saveAll(tasksToCancel);
+            log.warn("Cancelled {} remaining tasks due to batch failure", tasksToCancel.size());
         }
     }
 }

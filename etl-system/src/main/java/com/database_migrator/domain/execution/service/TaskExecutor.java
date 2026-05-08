@@ -51,6 +51,8 @@ public class TaskExecutor {
         task.setRowsProcessed(0L);
         taskRepository.save(task);
 
+        long rowsMigrated = 0;
+
         try {
             Long modelId = table.getTransformationModel().getId();
             TransformationModel model = transformationModelRepository.findByIdWithAssociations(modelId)
@@ -76,24 +78,27 @@ public class TaskExecutor {
                 // Step 2: MIGRATE DATA (batched with transformations)
                 log.info("Task {}: Migrating data for table {}", task.getId(), tableName);
 
-                long rowsMigrated = dataMigrationService.migrateTableData(
+                rowsMigrated = dataMigrationService.migrateTableData(
                         task,
                         connections.source(),
                         connections.target(),
                         table);
 
+                // Final commit before closing connections
+                connections.target().commit();
+
                 log.info("Task {}: Data migration completed. Rows: {}", task.getId(), rowsMigrated);
 
-                // Mark task as completed
-                task.setStatus(TaskStatusEnum.COMPLETED);
-                task.setCompletedAt(new Date());
-                task.setRowsProcessed(rowsMigrated);
-                taskRepository.save(task);
+            } // Connections are now guaranteed closed
 
-                log.info("Task {}: Execution completed successfully for table {} ({} rows)",
-                        task.getId(), tableName, rowsMigrated);
+            // Update task status AFTER connections are closed
+            task.setStatus(TaskStatusEnum.COMPLETED);
+            task.setCompletedAt(new Date());
+            task.setRowsProcessed(rowsMigrated);
+            taskRepository.save(task);
 
-            }
+            log.info("Task {}: Execution completed successfully for table {} ({} rows)",
+                    task.getId(), tableName, rowsMigrated);
 
         } catch (ResourceNotFoundException e) {
             // Re-throw ResourceNotFoundException as-is

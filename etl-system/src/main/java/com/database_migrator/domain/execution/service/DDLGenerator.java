@@ -29,10 +29,21 @@ public class DDLGenerator {
     private final DatabaseDialectLoader dialectLoader;
 
     public String generateCreateTableDDL(TransformationTable table, TransformationModel model, DatabaseTypeEnum targetDb) {
+        return generateCreateTableDDL(table, model, targetDb, true); // Default to IF NOT EXISTS for idempotency
+    }
+
+    public String generateCreateTableDDL(TransformationTable table, TransformationModel model,
+                                         DatabaseTypeEnum targetDb, boolean ifNotExists) {
         String tableName = TransformationUtils.getEffectiveTableName(table);
         StringBuilder ddl = new StringBuilder();
 
-        ddl.append("CREATE TABLE ").append(dialectLoader.escapeIdentifier(tableName, targetDb)).append(" (\n");
+        ddl.append("CREATE TABLE ");
+
+        if (ifNotExists) {
+            ddl.append("IF NOT EXISTS ");
+        }
+
+        ddl.append(dialectLoader.escapeIdentifier(tableName, targetDb)).append(" (\n");
 
         List<String> columnDefs = new ArrayList<>();
         List<String> pkColumns = new ArrayList<>();
