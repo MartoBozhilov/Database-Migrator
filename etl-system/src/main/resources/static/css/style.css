@@ -1,0 +1,173 @@
+:root {
+    --primary-green: #28a745;
+    --primary-green-dark: #218838;
+    --primary-green-light: #d4edda;
+    --text-dark: #212529;
+    --text-muted: #6c757d;
+    --white: #ffffff;
+    --gray-light: #f8f9fa;
+    --border-color: #dee2e6;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--gray-light);
+    color: var(--text-dark);
+}
+
+/* Header */
+.header {
+    background-color: var(--white);
+    border-bottom: 3px solid var(--primary-green);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header .navbar-brand {
+    color: var(--primary-green);
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.header .nav-link {
+    color: var(--text-dark);
+    transition: color 0.3s;
+}
+
+.header .nav-link:hover,
+.header .nav-link.active {
+    color: var(--primary-green);
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-green-dark);
+    border-color: var(--primary-green-dark);
+}
+
+.btn-outline-primary {
+    color: var(--primary-green);
+    border-color: var(--primary-green);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+}
+
+/* Cards */
+.card {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Tiles on home page */
+.tile {
+    background-color: var(--white);
+    border: 2px solid var(--primary-green);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.tile:hover {
+    background-color: var(--primary-green-light);
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(40, 167, 69, 0.2);
+}
+
+.tile i {
+    font-size: 3rem;
+    color: var(--primary-green);
+    margin-bottom: 1rem;
+}
+
+.tile h3 {
+    color: var(--primary-green);
+    margin: 0;
+}
+
+/* List rows */
+.list-row {
+    background-color: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.list-row:hover {
+    background-color: var(--primary-green-light);
+    border-color: var(--primary-green);
+    transform: translateX(5px);
+}
+
+/* Badges */
+.badge-green {
+    background-color: var(--primary-green);
+}
+
+.badge-light-green {
+    background-color: var(--primary-green-light);
+    color: var(--primary-green);
+}
+
+/* User dropdown */
+.user-menu {
+    background-color: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+/* Landing page */
+.landing-hero {
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--white) 0%, var(--primary-green-light) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.landing-title {
+    font-size: 4rem;
+    font-weight: bold;
+    color: var(--primary-green);
+    margin-bottom: 2rem;
+}
+
+/* Status badges */
+.status-pending {
+    background-color: #ffc107;
+}
+
+.status-in-progress {
+    background-color: #17a2b8;
+}
+
+.status-completed {
+    background-color: var(--primary-green);
+}
+
+.status-failed {
+    background-color: #dc3545;
+}

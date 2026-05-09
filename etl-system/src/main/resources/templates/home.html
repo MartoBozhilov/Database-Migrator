@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Migrator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header (shows when logged in) -->
+    <nav class="header navbar navbar-expand-lg" id="loggedInHeader" style="display: none;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/home">Database Migrator</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/connectors">Connectors</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/scans">System Scans</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/transformations">Transformation Models</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/cycles">Cycles</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <a class="btn btn-outline-secondary btn-sm me-2" href="https://github.com/MartoBozhilov/Diploma-Project" target="_blank">
+                        <i class="bi bi-book"></i> Docs
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> <span id="userEmail"></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end user-menu">
+                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person"></i> Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Landing page (shows when not logged in) -->
+    <div class="landing-hero" id="landingPage">
+        <div class="container text-center">
+            <h1 class="landing-title">Database Migrator</h1>
+            <p class="lead mb-5">Migrate data between heterogeneous database systems with full transformation capabilities</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="/login" class="btn btn-primary btn-lg">
+                    <i class="bi bi-box-arrow-in-right"></i> Login
+                </a>
+                <a href="https://github.com/MartoBozhilov/Diploma-Project" target="_blank" class="btn btn-outline-primary btn-lg">
+                    <i class="bi bi-github"></i> Documentation
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Home page tiles (shows when logged in) -->
+    <div class="container mt-5" id="homeTiles" style="display: none;">
+        <h2 class="text-center mb-5">Welcome to Database Migrator</h2>
+        <div class="row g-4">
+            <div class="col-md-6" id="connectorsTile">
+                <div class="tile" onclick="window.location.href='/connectors'">
+                    <i class="bi bi-hdd-network"></i>
+                    <h3>Connectors</h3>
+                    <p class="text-muted">Manage database connections</p>
+                </div>
+            </div>
+            <div class="col-md-6" id="scansTile">
+                <div class="tile" onclick="window.location.href='/scans'">
+                    <i class="bi bi-search"></i>
+                    <h3>System Scans</h3>
+                    <p class="text-muted">Extract database metadata</p>
+                </div>
+            </div>
+            <div class="col-md-6" id="transformationsTile">
+                <div class="tile" onclick="window.location.href='/transformations'">
+                    <i class="bi bi-shuffle"></i>
+                    <h3>Transformation Models</h3>
+                    <p class="text-muted">Define schema transformations</p>
+                </div>
+            </div>
+            <div class="col-md-6" id="cyclesTile">
+                <div class="tile" onclick="window.location.href='/cycles'">
+                    <i class="bi bi-play-circle"></i>
+                    <h3>Execution Cycles</h3>
+                    <p class="text-muted">Execute data migrations</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // SAFETY: Clear bad localStorage data
+        const userStr = localStorage.getItem('user');
+        if (userStr === 'undefined' || userStr === 'null') {
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+        }
+
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        let user = {};
+
+        // Safely parse user
+        const cleanUserStr = localStorage.getItem('user');
+        if (cleanUserStr && cleanUserStr !== 'undefined' && cleanUserStr !== 'null') {
+            try {
+                user = JSON.parse(cleanUserStr);
+            } catch (e) {
+                console.error('Failed to parse user:', e);
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+            }
+        }
+
+        console.log('Token:', token);
+        console.log('User string:', cleanUserStr);
+        console.log('User object:', user);
+        console.log('User email:', user.email);
+
+        if (token && user && user.email) {
+            console.log('User is logged in - showing tiles');
+            // User is logged in - show tiles and header
+            document.getElementById('landingPage').style.display = 'none';
+            document.getElementById('loggedInHeader').style.display = 'block';
+            document.getElementById('homeTiles').style.display = 'block';
+            document.getElementById('userEmail').textContent = user.email;
+
+            // Role-based access control for tiles
+            function hasRole(role) {
+                return user.roles && user.roles.includes(role);
+            }
+
+            function isAdmin() {
+                return hasRole('ADMIN') || hasRole('MIGRATION_ADMIN');
+            }
+
+            // Hide tiles based on roles
+            if (!isAdmin() && !hasRole('CONNECTOR_USER')) {
+                document.getElementById('connectorsTile').style.display = 'none';
+                document.getElementById('scansTile').style.display = 'none';
+            }
+            if (!isAdmin() && !hasRole('TRANSFORMATION_MODEL_USER')) {
+                document.getElementById('transformationsTile').style.display = 'none';
+            }
+            if (!isAdmin() && !hasRole('CYCLE_EXECUTION_USER')) {
+                document.getElementById('cyclesTile').style.display = 'none';
+            }
+
+            // Hide navigation links based on roles
+            const navLinks = document.querySelectorAll('.navbar-nav .nav-item');
+            navLinks.forEach(navItem => {
+                const link = navItem.querySelector('a');
+                if (!link) return;
+
+                const href = link.getAttribute('href');
+                if (href.includes('/connectors') && !isAdmin() && !hasRole('CONNECTOR_USER')) {
+                    navItem.style.display = 'none';
+                } else if (href.includes('/scans') && !isAdmin() && !hasRole('CONNECTOR_USER')) {
+                    navItem.style.display = 'none';
+                } else if (href.includes('/transformations') && !isAdmin() && !hasRole('TRANSFORMATION_MODEL_USER')) {
+                    navItem.style.display = 'none';
+                } else if (href.includes('/cycles') && !isAdmin() && !hasRole('CYCLE_EXECUTION_USER')) {
+                    navItem.style.display = 'none';
+                }
+            });
+        } else {
+            console.log('User is NOT logged in - showing landing page');
+            // User is not logged in - show landing page
+            document.getElementById('landingPage').style.display = 'flex';
+            document.getElementById('loggedInHeader').style.display = 'none';
+            document.getElementById('homeTiles').style.display = 'none';
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/home';
+        }
+    </script>
+</body>
+</html>

@@ -18,12 +18,15 @@ public class CycleResponse {
     private String name;
     private Long transformationModelId;
     private String transformationModelName;
+    private Long targetConnectorId;
+    private String targetConnectorName;
     private CycleStatusEnum status;
     private Date createdAt;
     private Date startedAt;
     private Date completedAt;
     private String errorMessage;
     private Integer totalTasks;
+    private Integer taskCount;
     private Integer completedTasks;
     private Integer failedTasks;
     private Long createdById;

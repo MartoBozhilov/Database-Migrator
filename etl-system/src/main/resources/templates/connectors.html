@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connectors - Database Migrator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <div th:replace="fragments/header :: header('connectors')"></div>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-hdd-network"></i> Database Connectors</h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createConnectorModal">
+                <i class="bi bi-plus-circle"></i> Create New Connector
+            </button>
+        </div>
+
+        <!-- Loading spinner -->
+        <div id="loading" class="text-center my-5">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Connectors list -->
+        <div id="connectorsList"></div>
+    </div>
+
+    <!-- Create Connector Modal -->
+    <div class="modal fade" id="createConnectorModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Database Connector</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createConnectorForm">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="databaseType" class="form-label">Database Type</label>
+                            <select class="form-select" id="databaseType" required>
+                                <option value="MYSQL">MySQL</option>
+                                <option value="POSTGRESQL">PostgreSQL</option>
+                                <option value="MSSQL">MS SQL Server</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="connectorType" class="form-label">Connector Type</label>
+                            <select class="form-select" id="connectorType" required>
+                                <option value="SOURCE">Source</option>
+                                <option value="TARGET">Target</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="host" class="form-label">Host</label>
+                            <input type="text" class="form-control" id="host" placeholder="localhost" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="port" class="form-label">Port</label>
+                            <input type="number" class="form-control" id="port" placeholder="3306" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="databaseName" class="form-label">Database Name</label>
+                            <input type="text" class="form-control" id="databaseName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" required>
+                        </div>
+                        <div id="createError" class="alert alert-danger d-none"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createConnector()">Create Connector</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:replace="fragments/header :: auth-script"></script>
+    <script>
+        async function loadConnectors() {
+            try {
+                const response = await apiCall('/api/connectors');
+                const connectors = await response.json();
+
+                const container = document.getElementById('connectorsList');
+                document.getElementById('loading').style.display = 'none';
+
+                if (connectors.length === 0) {
+                    container.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> No connectors yet. Create your first connector!</div>';
+                    return;
+                }
+
+                container.innerHTML = connectors.map(conn => `
+                    <div class="list-row" onclick="window.location.href='/connectors/${conn.id}'">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">${conn.name}</h5>
+                                <p class="mb-0 text-muted small">
+                                    <i class="bi bi-hdd"></i> ${conn.host}:${conn.port}
+                                    | <i class="bi bi-database"></i> ${conn.databaseName}
+                                    | <i class="bi bi-person"></i> ${conn.username}
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge ${conn.connectorType === 'SOURCE' ? 'bg-primary' : 'bg-success'}">${conn.connectorType}</span>
+                                <span class="badge bg-secondary">${conn.databaseType}</span>
+                                <p class="mb-0 text-muted small mt-1">
+                                    <i class="bi bi-person-circle"></i> ${conn.createdByName || 'Unknown'}
+                                    | ${formatDate(conn.createdAt)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading connectors:', error);
+                document.getElementById('loading').innerHTML = '<div class="alert alert-danger">Error loading connectors</div>';
+            }
+        }
+
+        async function createConnector() {
+            const data = {
+                name: document.getElementById('name').value,
+                databaseType: document.getElementById('databaseType').value,
+                connectorType: document.getElementById('connectorType').value,
+                host: document.getElementById('host').value,
+                port: parseInt(document.getElementById('port').value),
+                databaseName: document.getElementById('databaseName').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+
+            const errorDiv = document.getElementById('createError');
+            errorDiv.classList.add('d-none');
+
+            try {
+                const response = await apiCall('/api/connectors', 'POST', data);
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('createConnectorModal')).hide();
+                    document.getElementById('createConnectorForm').reset();
+                    loadConnectors();
+                } else {
+                    const error = await response.json();
+                    errorDiv.textContent = error.message || 'Failed to create connector';
+                    errorDiv.classList.remove('d-none');
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Connection error. Please try again.';
+                errorDiv.classList.remove('d-none');
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            return new Date(dateString).toLocaleString();
+        }
+
+        // Load data on page load
+        loadConnectors();
+    </script>
+</body>
+</html>

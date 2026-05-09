@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Details - Database Migrator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <div th:replace="fragments/header :: header('scans')"></div>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="/scans" class="text-muted text-decoration-none">
+                    <i class="bi bi-arrow-left"></i> Back to System Scans
+                </a>
+                <h2 class="mt-2" id="scanName"><i class="bi bi-search"></i> Loading...</h2>
+            </div>
+            <div>
+                <button id="startScanBtn" class="btn btn-success me-2" onclick="startScan()" style="display: none;">
+                    <i class="bi bi-play-circle"></i> Start Scan
+                </button>
+                <button class="btn btn-outline-danger" onclick="deleteScan()">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading spinner -->
+        <div id="loading" class="text-center my-5">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Scan in progress banner -->
+        <div id="scanInProgress" class="alert alert-info" style="display: none;">
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm text-info me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span><strong>Scan in progress...</strong> The page will automatically refresh when the scan completes.</span>
+            </div>
+        </div>
+
+        <!-- Scan details -->
+        <div id="scanDetails" style="display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="bi bi-info-circle"></i> Scan Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Name:</th>
+                                    <td id="detailName"></td>
+                                </tr>
+                                <tr>
+                                    <th>Source Connector:</th>
+                                    <td id="detailConnector"></td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td><span class="badge" id="detailStatus"></span></td>
+                                </tr>
+                                <tr>
+                                    <th>Tables Count:</th>
+                                    <td id="detailTableCount"></td>
+                                </tr>
+                                <tr>
+                                    <th>Relations Count:</th>
+                                    <td id="detailRelationCount"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="bi bi-clock-history"></i> Metadata</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Created By:</th>
+                                    <td id="detailCreatedBy"></td>
+                                </tr>
+                                <tr>
+                                    <th>Created At:</th>
+                                    <td id="detailCreatedAt"></td>
+                                </tr>
+                                <tr>
+                                    <th>Started At:</th>
+                                    <td id="detailStartedAt"></td>
+                                </tr>
+                                <tr>
+                                    <th>Completed At:</th>
+                                    <td id="detailCompletedAt"></td>
+                                </tr>
+                                <tr id="errorRow" style="display: none;">
+                                    <th>Error:</th>
+                                    <td id="detailError" class="text-danger"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tables Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-table"></i> Extracted Tables</h5>
+                </div>
+                <div class="card-body">
+                    <div id="tablesAccordion" class="accordion"></div>
+                </div>
+            </div>
+
+            <!-- Relations Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-diagram-3"></i> Extracted Relations</h5>
+                </div>
+                <div class="card-body">
+                    <div id="relationsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:replace="fragments/header :: auth-script"></script>
+    <script>
+        const scanId = window.location.pathname.split('/').pop();
+        let scanData = null;
+        let pollingInterval = null;
+
+        async function loadScan() {
+            try {
+                const response = await apiCall(`/api/scans/${scanId}/details`);
+                scanData = await response.json();
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('scanDetails').style.display = 'block';
+
+                // Update page title
+                document.getElementById('scanName').innerHTML = `<i class="bi bi-search"></i> ${scanData.name}`;
+
+                // Fill basic details
+                document.getElementById('detailName').textContent = scanData.name;
+                document.getElementById('detailConnector').innerHTML = `<a href="/connectors/${scanData.sourceConnectorId}" class="text-decoration-none">${scanData.sourceConnectorName}</a>`;
+
+                const statusBadge = document.getElementById('detailStatus');
+                statusBadge.textContent = scanData.status;
+                statusBadge.className = `badge ${getStatusBadgeClass(scanData.status)}`;
+
+                document.getElementById('detailTableCount').textContent = scanData.tableCount || 0;
+                document.getElementById('detailRelationCount').textContent = scanData.relationCount || 0;
+                document.getElementById('detailCreatedBy').textContent = scanData.createdByName;
+                document.getElementById('detailCreatedAt').textContent = formatDate(scanData.createdAt);
+                document.getElementById('detailStartedAt').textContent = scanData.startedAt ? formatDate(scanData.startedAt) : 'N/A';
+                document.getElementById('detailCompletedAt').textContent = scanData.completedAt ? formatDate(scanData.completedAt) : 'N/A';
+
+                // Show error if present
+                if (scanData.errorMessage) {
+                    document.getElementById('errorRow').style.display = '';
+                    document.getElementById('detailError').textContent = scanData.errorMessage;
+                }
+
+                // Show start button if status is PENDING
+                if (scanData.status === 'PENDING') {
+                    document.getElementById('startScanBtn').style.display = 'inline-block';
+                }
+
+                // Show progress banner and start polling if IN_PROGRESS
+                if (scanData.status === 'IN_PROGRESS') {
+                    document.getElementById('scanInProgress').style.display = 'block';
+                    startPolling();
+                } else {
+                    // Stop polling if status changed
+                    stopPolling();
+                    document.getElementById('scanInProgress').style.display = 'none';
+                }
+
+                // Render tables
+                renderTables(scanData.tables || []);
+
+                // Render relations
+                renderRelations(scanData.relations || []);
+
+            } catch (error) {
+                console.error('Error loading scan:', error);
+                document.getElementById('loading').innerHTML = '<div class="alert alert-danger">Error loading scan details</div>';
+            }
+        }
+
+        function renderTables(tables) {
+            const accordion = document.getElementById('tablesAccordion');
+
+            if (tables.length === 0) {
+                accordion.innerHTML = '<p class="text-muted">No tables found</p>';
+                return;
+            }
+
+            accordion.innerHTML = tables.map((table, index) => `
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading${index}">
+                        <button class="accordion-button ${index === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                            <i class="bi bi-table me-2"></i> ${table.tableName} <span class="badge bg-secondary ms-2">${table.columns ? table.columns.length : 0} columns</span>
+                        </button>
+                    </h2>
+                    <div id="collapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" data-bs-parent="#tablesAccordion">
+                        <div class="accordion-body">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Column Name</th>
+                                        <th>Data Type</th>
+                                        <th>Nullable</th>
+                                        <th>Auto Increment</th>
+                                        <th>Default Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${table.columns ? table.columns.map(col => `
+                                        <tr>
+                                            <td>
+                                                ${col.columnName}
+                                                ${col.isPrimaryKey ? '<span class="badge bg-warning text-dark ms-1">PK</span>' : ''}
+                                            </td>
+                                            <td>${col.dataType}</td>
+                                            <td>${col.isNullable ? '<i class="bi bi-check-circle text-success"></i>' : '<i class="bi bi-x-circle text-danger"></i>'}</td>
+                                            <td>${col.isAutoIncrement ? '<i class="bi bi-check-circle text-success"></i>' : '<i class="bi bi-x-circle text-muted"></i>'}</td>
+                                            <td>${col.defaultValue || '-'}</td>
+                                        </tr>
+                                    `).join('') : '<tr><td colspan="5">No columns</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderRelations(relations) {
+            const container = document.getElementById('relationsList');
+
+            if (relations.length === 0) {
+                container.innerHTML = '<p class="text-muted">No foreign key relations found</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>From Table</th>
+                            <th>From Column</th>
+                            <th>To Table</th>
+                            <th>To Column</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${relations.map(rel => `
+                            <tr>
+                                <td><i class="bi bi-link-45deg"></i> ${rel.foreignTable}</td>
+                                <td>${rel.foreignColumn}</td>
+                                <td>${rel.primaryTable}</td>
+                                <td>${rel.primaryColumn}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function startPolling() {
+            // Don't start if already polling
+            if (pollingInterval) return;
+
+            pollingInterval = setInterval(async () => {
+                try {
+                    const response = await apiCall(`/api/scans/${scanId}`);
+                    const scanStatus = await response.json();
+
+                    // If status changed from IN_PROGRESS, reload full data
+                    if (scanStatus.status !== 'IN_PROGRESS') {
+                        stopPolling();
+                        loadScan(); // Reload full scan data
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 3000); // Poll every 3 seconds
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        async function startScan() {
+            if (!confirm('Are you sure you want to start this scan?')) {
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/api/scans/${scanId}/start`, 'POST');
+                if (response.ok) {
+                    // Show progress banner and start polling
+                    document.getElementById('startScanBtn').style.display = 'none';
+                    document.getElementById('scanInProgress').style.display = 'block';
+                    startPolling();
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Failed to start scan');
+                }
+            } catch (error) {
+                alert('Error starting scan: ' + error.message);
+            }
+        }
+
+        async function deleteScan() {
+            if (!confirm('Are you sure you want to delete this scan? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/api/scans/${scanId}`, 'DELETE');
+                if (response.ok || response.status === 204) {
+                    window.location.href = '/scans';
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Failed to delete scan');
+                }
+            } catch (error) {
+                alert('Error deleting scan: ' + error.message);
+            }
+        }
+
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'PENDING': 'status-pending',
+                'IN_PROGRESS': 'status-in-progress',
+                'COMPLETED': 'status-completed',
+                'FAILED': 'status-failed'
+            };
+            return classes[status] || 'bg-secondary';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            return new Date(dateString).toLocaleString();
+        }
+
+        // Load scan on page load
+        loadScan();
+
+        // Cleanup polling on page unload
+        window.addEventListener('beforeunload', stopPolling);
+    </script>
+</body>
+</html>

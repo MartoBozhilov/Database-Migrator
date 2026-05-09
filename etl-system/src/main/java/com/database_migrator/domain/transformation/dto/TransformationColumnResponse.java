@@ -15,7 +15,9 @@ public class TransformationColumnResponse {
     private Long id;
     private String sourceColumnName;
     private String sourceDataType;
-    private String resolvedTargetType;  // Resolved target database type (NULL if same-db, no transformation)
+    private String resolvedTargetType;
     private Long sourceColumnMetadataId;
+    private Boolean isPrimaryKey;
+    private Boolean isForeignKey;
     private List<ColumnTransformationAssignmentResponse> columnTransformations;
 }

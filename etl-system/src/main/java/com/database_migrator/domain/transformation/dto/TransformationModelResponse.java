@@ -18,6 +18,9 @@ public class TransformationModelResponse {
     private Boolean isConfirmed;
     private Long systemScanId;
     private String systemScanName;
+    private Long sourceConnectorId;
+    private String sourceConnectorName;
+    private DatabaseTypeEnum sourceDatabaseType;
     private Long targetConnectorId;
     private String targetConnectorName;
     private DatabaseTypeEnum targetDatabaseType;
@@ -26,4 +29,5 @@ public class TransformationModelResponse {
     private Date createdAt;
     private Integer tableCount;
     private Integer columnCount;
+    private Integer relationCount;
 }

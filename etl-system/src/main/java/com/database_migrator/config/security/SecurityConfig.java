@@ -34,8 +34,15 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // API endpoints
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/**").authenticated()
+                        // Web pages and static resources - all permitAll (authentication handled by JavaScript)
+                        .requestMatchers("/", "/home", "/login", "/connectors", "/connectors/**",
+                                        "/scans", "/scans/**", "/transformations", "/transformations/**",
+                                        "/cycles", "/cycles/**", "/profile",
+                                        "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)

@@ -24,6 +24,7 @@ import com.database_migrator.domain.transformation.dto.TransformationModelRespon
 import com.database_migrator.domain.transformation.dto.TransformationRelationResponse;
 import com.database_migrator.domain.transformation.dto.TransformationTableResponse;
 import com.database_migrator.domain.transformation.model.ColumnTransformationAssignment;
+import com.database_migrator.domain.transformation.model.ColumnTransformationType;
 import com.database_migrator.domain.transformation.model.TableTransformationAssignment;
 import com.database_migrator.domain.transformation.model.TransformationColumn;
 import com.database_migrator.domain.transformation.model.TransformationModel;
@@ -190,6 +191,9 @@ public class ResponseMapper {
         response.setIsConfirmed(model.getIsConfirmed());
         response.setSystemScanId(model.getSystemScan().getId());
         response.setSystemScanName(model.getSystemScan().getName());
+        response.setSourceConnectorId(model.getSystemScan().getSourceConnector().getId());
+        response.setSourceConnectorName(model.getSystemScan().getSourceConnector().getName());
+        response.setSourceDatabaseType(model.getSystemScan().getSourceConnector().getDatabaseType());
         response.setTargetConnectorId(model.getTargetConnector().getId());
         response.setTargetConnectorName(model.getTargetConnector().getName());
         response.setTargetDatabaseType(model.getTargetConnector().getDatabaseType());
@@ -206,8 +210,10 @@ public class ResponseMapper {
                 }
             }
         }
+        int relationCount = model.getTransformationRelations() != null ? model.getTransformationRelations().size() : 0;
         response.setTableCount(tableCount);
         response.setColumnCount(columnCount);
+        response.setRelationCount(relationCount);
 
         return response;
     }
@@ -219,6 +225,9 @@ public class ResponseMapper {
         response.setIsConfirmed(model.getIsConfirmed());
         response.setSystemScanId(model.getSystemScan().getId());
         response.setSystemScanName(model.getSystemScan().getName());
+        response.setSourceConnectorId(model.getSystemScan().getSourceConnector().getId());
+        response.setSourceConnectorName(model.getSystemScan().getSourceConnector().getName());
+        response.setSourceDatabaseType(model.getSystemScan().getSourceConnector().getDatabaseType());
         response.setTargetConnectorId(model.getTargetConnector().getId());
         response.setTargetConnectorName(model.getTargetConnector().getName());
         response.setTargetDatabaseType(model.getTargetConnector().getDatabaseType());
@@ -242,8 +251,13 @@ public class ResponseMapper {
                         .count();
             }
         }
+        int relationCount = model.getTransformationRelations() != null ?
+                (int) model.getTransformationRelations().stream()
+                        .filter(relation -> !relation.getIsDeleted())
+                        .count() : 0;
         response.setTableCount(tableCount);
         response.setColumnCount(columnCount);
+        response.setRelationCount(relationCount);
 
         List<TransformationTableResponse> tables = activeTables.stream()
                 .map(this::toTransformationTableResponse)
@@ -298,6 +312,41 @@ public class ResponseMapper {
         response.setResolvedTargetType(column.getResolvedTargetType());
         response.setSourceColumnMetadataId(column.getSourceColumnMetadata() != null ?
                 column.getSourceColumnMetadata().getId() : null);
+
+        // Set PK flag - check ADD_COLUMN assignment first (for user-added columns), then metadata
+        boolean isPrimaryKey = false;
+        if (column.getAssignments() != null) {
+            for (ColumnTransformationAssignment assignment : column.getAssignments()) {
+                if (assignment.getTransformationType() == ColumnTransformationType.ADD_COLUMN) {
+                    isPrimaryKey = Boolean.TRUE.equals(assignment.getIsPrimaryKey());
+                    break;
+                }
+            }
+        }
+        // Fallback to source metadata for scanned columns
+        if (!isPrimaryKey && column.getSourceColumnMetadata() != null) {
+            isPrimaryKey = Boolean.TRUE.equals(column.getSourceColumnMetadata().getIsPrimaryKey());
+        }
+        response.setIsPrimaryKey(isPrimaryKey);
+
+        // Set FK flag by checking if column is used in any relation
+        boolean isForeignKey = false;
+        if (column.getTransformationTable() != null &&
+            column.getTransformationTable().getTransformationModel() != null &&
+            column.getTransformationTable().getTransformationModel().getTransformationRelations() != null) {
+
+            String effectiveTableName = TransformationUtils.getEffectiveTableName(column.getTransformationTable());
+            String effectiveColumnName = TransformationUtils.getEffectiveColumnName(column);
+
+            if (effectiveTableName != null && effectiveColumnName != null) {
+                isForeignKey = column.getTransformationTable().getTransformationModel()
+                        .getTransformationRelations().stream()
+                        .anyMatch(rel -> !rel.getIsDeleted() &&
+                                effectiveTableName.equals(rel.getForeignTable()) &&
+                                effectiveColumnName.equals(rel.getForeignColumn()));
+            }
+        }
+        response.setIsForeignKey(isForeignKey);
 
         List<ColumnTransformationAssignmentResponse> columnTransformations = column.getAssignments() != null ?
                 column.getAssignments().stream()
@@ -365,6 +414,10 @@ public class ResponseMapper {
         response.setName(cycle.getName());
         response.setTransformationModelId(cycle.getTransformationModel().getId());
         response.setTransformationModelName(cycle.getTransformationModel().getName());
+
+        response.setTargetConnectorId(cycle.getTargetConnector().getId());
+        response.setTargetConnectorName(cycle.getTargetConnector().getName());
+
         response.setStatus(cycle.getStatus());
         response.setCreatedAt(cycle.getCreatedAt());
         response.setStartedAt(cycle.getStartedAt());
@@ -376,6 +429,7 @@ public class ResponseMapper {
         // Count tasks by status
         if (cycle.getTasks() != null) {
             response.setTotalTasks(cycle.getTasks().size());
+            response.setTaskCount(cycle.getTasks().size()); // Alias for UI
             response.setCompletedTasks((int) cycle.getTasks().stream()
                 .filter(t -> t.getStatus() == TaskStatusEnum.COMPLETED)
                 .count());

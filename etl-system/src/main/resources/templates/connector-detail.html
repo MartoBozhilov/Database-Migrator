@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connector Details - Database Migrator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <div th:replace="fragments/header :: header('connectors')"></div>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="/connectors" class="text-muted text-decoration-none">
+                    <i class="bi bi-arrow-left"></i> Back to Connectors
+                </a>
+                <h2 class="mt-2" id="connectorName"><i class="bi bi-hdd-network"></i> Loading...</h2>
+            </div>
+            <div>
+                <button class="btn btn-outline-primary me-2" onclick="testConnection()">
+                    <i class="bi bi-check-circle"></i> Test Connection
+                </button>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateModal">
+                    <i class="bi bi-pencil"></i> Update
+                </button>
+                <button class="btn btn-outline-danger" onclick="deleteConnector()">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading spinner -->
+        <div id="loading" class="text-center my-5">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Connector details -->
+        <div id="connectorDetails" style="display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="bi bi-info-circle"></i> Connection Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Name:</th>
+                                    <td id="detailName"></td>
+                                </tr>
+                                <tr>
+                                    <th>Database Type:</th>
+                                    <td><span class="badge bg-secondary" id="detailDatabaseType"></span></td>
+                                </tr>
+                                <tr>
+                                    <th>Connector Type:</th>
+                                    <td><span class="badge" id="detailConnectorType"></span></td>
+                                </tr>
+                                <tr>
+                                    <th>Host:</th>
+                                    <td id="detailHost"></td>
+                                </tr>
+                                <tr>
+                                    <th>Port:</th>
+                                    <td id="detailPort"></td>
+                                </tr>
+                                <tr>
+                                    <th>Database Name:</th>
+                                    <td id="detailDatabaseName"></td>
+                                </tr>
+                                <tr>
+                                    <th>Username:</th>
+                                    <td id="detailUsername"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="bi bi-clock-history"></i> Metadata</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Created By:</th>
+                                    <td id="detailCreatedBy"></td>
+                                </tr>
+                                <tr>
+                                    <th>Created At:</th>
+                                    <td id="detailCreatedAt"></td>
+                                </tr>
+                                <tr>
+                                    <th>Updated At:</th>
+                                    <td id="detailUpdatedAt"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Connection Test Result -->
+                    <div id="testResult" class="alert" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Connector Modal -->
+    <div class="modal fade" id="updateModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Connector</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="updateForm">
+                        <div class="mb-3">
+                            <label for="updateName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="updateName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateDatabaseType" class="form-label">Database Type</label>
+                            <select class="form-select" id="updateDatabaseType" required>
+                                <option value="MYSQL">MySQL</option>
+                                <option value="POSTGRESQL">PostgreSQL</option>
+                                <option value="MSSQL">MS SQL Server</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateConnectorType" class="form-label">Connector Type</label>
+                            <select class="form-select" id="updateConnectorType" required>
+                                <option value="SOURCE">Source</option>
+                                <option value="TARGET">Target</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateHost" class="form-label">Host</label>
+                            <input type="text" class="form-control" id="updateHost" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updatePort" class="form-label">Port</label>
+                            <input type="number" class="form-control" id="updatePort" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateDatabaseName" class="form-label">Database Name</label>
+                            <input type="text" class="form-control" id="updateDatabaseName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateUsername" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="updateUsername" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updatePassword" class="form-label">Password (leave empty to keep current)</label>
+                            <input type="password" class="form-control" id="updatePassword">
+                            <small class="text-muted">Only provide if you want to change the password</small>
+                        </div>
+                        <div id="updateError" class="alert alert-danger d-none"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateConnector()">Update Connector</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:replace="fragments/header :: auth-script"></script>
+    <script>
+        const connectorId = window.location.pathname.split('/').pop();
+        let connectorData = null;
+
+        async function loadConnector() {
+            try {
+                const response = await apiCall(`/api/connectors/${connectorId}`);
+                connectorData = await response.json();
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('connectorDetails').style.display = 'block';
+
+                // Update page title
+                document.getElementById('connectorName').innerHTML = `<i class="bi bi-hdd-network"></i> ${connectorData.name}`;
+
+                // Fill details
+                document.getElementById('detailName').textContent = connectorData.name;
+                document.getElementById('detailDatabaseType').textContent = connectorData.databaseType;
+
+                const connectorTypeBadge = document.getElementById('detailConnectorType');
+                connectorTypeBadge.textContent = connectorData.connectorType;
+                connectorTypeBadge.className = `badge ${connectorData.connectorType === 'SOURCE' ? 'bg-primary' : 'bg-success'}`;
+
+                document.getElementById('detailHost').textContent = connectorData.host;
+                document.getElementById('detailPort').textContent = connectorData.port;
+                document.getElementById('detailDatabaseName').textContent = connectorData.databaseName;
+                document.getElementById('detailUsername').textContent = connectorData.username;
+                document.getElementById('detailCreatedBy').textContent = connectorData.createdByName;
+                document.getElementById('detailCreatedAt').textContent = formatDate(connectorData.createdAt);
+                document.getElementById('detailUpdatedAt').textContent = connectorData.updatedAt ? formatDate(connectorData.updatedAt) : 'Never';
+
+                // Populate update form
+                document.getElementById('updateName').value = connectorData.name;
+                document.getElementById('updateDatabaseType').value = connectorData.databaseType;
+                document.getElementById('updateConnectorType').value = connectorData.connectorType;
+                document.getElementById('updateHost').value = connectorData.host;
+                document.getElementById('updatePort').value = connectorData.port;
+                document.getElementById('updateDatabaseName').value = connectorData.databaseName;
+                document.getElementById('updateUsername').value = connectorData.username;
+
+            } catch (error) {
+                console.error('Error loading connector:', error);
+                document.getElementById('loading').innerHTML = '<div class="alert alert-danger">Error loading connector</div>';
+            }
+        }
+
+        async function testConnection() {
+            const testResult = document.getElementById('testResult');
+            testResult.style.display = 'block';
+            testResult.className = 'alert alert-info';
+            testResult.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing connection...';
+
+            try {
+                const response = await apiCall(`/api/connectors/${connectorId}/test`, 'POST');
+                const result = await response.json();
+
+                if (result.success) {
+                    testResult.className = 'alert alert-success';
+                    testResult.innerHTML = `<i class="bi bi-check-circle"></i> <strong>Connection successful!</strong><br>${result.message}${result.databaseVersion ? `<br>Database version: ${result.databaseVersion}` : ''}`;
+                } else {
+                    testResult.className = 'alert alert-danger';
+                    testResult.innerHTML = `<i class="bi bi-x-circle"></i> <strong>Connection failed!</strong><br>${result.message}`;
+                }
+            } catch (error) {
+                testResult.className = 'alert alert-danger';
+                testResult.innerHTML = `<i class="bi bi-x-circle"></i> <strong>Error testing connection</strong><br>${error.message}`;
+            }
+        }
+
+        async function updateConnector() {
+            const data = {
+                name: document.getElementById('updateName').value,
+                databaseType: document.getElementById('updateDatabaseType').value,
+                connectorType: document.getElementById('updateConnectorType').value,
+                host: document.getElementById('updateHost').value,
+                port: parseInt(document.getElementById('updatePort').value),
+                databaseName: document.getElementById('updateDatabaseName').value,
+                username: document.getElementById('updateUsername').value,
+                password: document.getElementById('updatePassword').value || undefined
+            };
+
+            // Remove password if empty
+            if (!data.password) {
+                delete data.password;
+            }
+
+            const errorDiv = document.getElementById('updateError');
+            errorDiv.classList.add('d-none');
+
+            try {
+                const response = await apiCall(`/api/connectors/${connectorId}`, 'PUT', data);
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('updateModal')).hide();
+                    loadConnector(); // Reload connector data
+
+                    // Show success message
+                    const testResult = document.getElementById('testResult');
+                    testResult.style.display = 'block';
+                    testResult.className = 'alert alert-success';
+                    testResult.innerHTML = '<i class="bi bi-check-circle"></i> Connector updated successfully!';
+                    setTimeout(() => {
+                        testResult.style.display = 'none';
+                    }, 3000);
+                } else {
+                    const error = await response.json();
+                    errorDiv.textContent = error.message || 'Failed to update connector';
+                    errorDiv.classList.remove('d-none');
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Connection error. Please try again.';
+                errorDiv.classList.remove('d-none');
+            }
+        }
+
+        async function deleteConnector() {
+            if (!confirm('Are you sure you want to delete this connector? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/api/connectors/${connectorId}`, 'DELETE');
+                if (response.ok || response.status === 204) {
+                    window.location.href = '/connectors';
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Failed to delete connector');
+                }
+            } catch (error) {
+                alert('Error deleting connector: ' + error.message);
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            return new Date(dateString).toLocaleString();
+        }
+
+        // Load connector on page load
+        loadConnector();
+    </script>
+</body>
+</html>

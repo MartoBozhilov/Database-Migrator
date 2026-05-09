@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- Header Fragment -->
+    <nav th:fragment="header(activePage)" class="header navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/home">Database Migrator</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${activePage == 'connectors'} ? 'active' : ''" href="/connectors">Connectors</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${activePage == 'scans'} ? 'active' : ''" href="/scans">System Scans</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${activePage == 'transformations'} ? 'active' : ''" href="/transformations">Transformation Models</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:classappend="${activePage == 'cycles'} ? 'active' : ''" href="/cycles">Cycles</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <a class="btn btn-outline-secondary btn-sm me-2" href="https://github.com/MartoBozhilov/Diploma-Project" target="_blank">
+                        <i class="bi bi-book"></i> Docs
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> <span id="userEmail"></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end user-menu">
+                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person"></i> Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Logout Script Fragment -->
+    <script th:fragment="auth-script">
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        if (!token) {
+            window.location.href = '/login';
+        }
+
+        document.getElementById('userEmail').textContent = user.email || '';
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/home';
+        }
+
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            const response = await fetch(endpoint, options);
+            if (response.status === 401) {
+                logout();
+                return null;
+            }
+            return response;
+        }
+
+        // Role-based access control helper functions
+        function hasRole(role) {
+            return user.roles && user.roles.includes(role);
+        }
+
+        function isAdmin() {
+            return hasRole('ADMIN') || hasRole('MIGRATION_ADMIN');
+        }
+
+        function canAccessConnectors() {
+            return isAdmin() || hasRole('CONNECTOR_USER');
+        }
+
+        function canAccessScans() {
+            return isAdmin() || hasRole('CONNECTOR_USER');
+        }
+
+        function canAccessTransformations() {
+            return isAdmin() || hasRole('TRANSFORMATION_MODEL_USER');
+        }
+
+        function canAccessCycles() {
+            return isAdmin() || hasRole('CYCLE_EXECUTION_USER');
+        }
+
+        // Hide navigation items based on roles
+        function applyRoleBasedUI() {
+            // Hide navigation links if user doesn't have permission
+            const navLinks = document.querySelectorAll('.navbar-nav .nav-item');
+            navLinks.forEach(navItem => {
+                const link = navItem.querySelector('a');
+                if (!link) return;
+
+                const href = link.getAttribute('href');
+                if (href.includes('/connectors') && !canAccessConnectors()) {
+                    navItem.style.display = 'none';
+                } else if (href.includes('/scans') && !canAccessScans()) {
+                    navItem.style.display = 'none';
+                } else if (href.includes('/transformations') && !canAccessTransformations()) {
+                    navItem.style.display = 'none';
+                } else if (href.includes('/cycles') && !canAccessCycles()) {
+                    navItem.style.display = 'none';
+                }
+            });
+        }
+
+        // Apply role-based UI on page load
+        if (typeof window !== 'undefined') {
+            window.addEventListener('DOMContentLoaded', applyRoleBasedUI);
+            // Also apply immediately if DOM is already loaded
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', applyRoleBasedUI);
+            } else {
+                applyRoleBasedUI();
+            }
+        }
+    </script>
+</body>
+</html>
