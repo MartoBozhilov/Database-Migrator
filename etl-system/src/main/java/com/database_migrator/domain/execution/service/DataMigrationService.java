@@ -42,12 +42,6 @@ public class DataMigrationService {
 
     /**
      * Migrate data from source to target table in batches
-     *
-     * @param task       Task being executed
-     * @param sourceConn Source database connection
-     * @param targetConn Target database connection
-     * @param table      Transformation table
-     * @return Total rows migrated
      */
     public long migrateTableData(Task task, Connection sourceConn, Connection targetConn,
                                  TransformationTable table) throws SQLException {
@@ -82,68 +76,35 @@ public class DataMigrationService {
 
         // Check if table has auto-increment columns (for MSSQL IDENTITY_INSERT)
         boolean hasAutoIncrement = hasAutoIncrementColumn(table);
-        log.info("Task {}: Table {} has auto-increment columns: {}", task.getId(), targetTableName, hasAutoIncrement);
 
-        // Enable IDENTITY_INSERT for MSSQL if table has auto-increment columns
-        if (targetDb == DatabaseTypeEnum.MSSQL && hasAutoIncrement) {
-            log.info("Task {}: Enabling IDENTITY_INSERT for MSSQL table {}", task.getId(), targetTableName);
+        if (shouldEnableIdentityInsert(targetDb, hasAutoIncrement)) {
             enableIdentityInsert(targetConn, targetTableName, targetDb);
         }
 
         try (PreparedStatement insertStmt = targetConn.prepareStatement(insertSQL)) {
-
             while (true) {
-                // Read batch from source (database-specific pagination)
-                String selectSQL = buildSelectStatement(sourceTableName, columnMappings, sourceDb, offset, BATCH_SIZE);
+                List<Map<String, Object>> batch = readBatch(sourceConn, sourceTableName, columnMappings, sourceDb, offset);
 
-                List<Map<String, Object>> batch = new ArrayList<>();
-
-                try (PreparedStatement selectStmt = sourceConn.prepareStatement(selectSQL);
-                     ResultSet rs = selectStmt.executeQuery()) {
-
-                    while (rs.next()) {
-                        Map<String, Object> row = new HashMap<>();
-                        for (ColumnMapping mapping : columnMappings) {
-                            row.put(mapping.getSourceColumn(), rs.getObject(mapping.getSourceColumn()));
-                        }
-                        batch.add(row);
-                    }
-                }
-
-                // No more data
                 if (batch.isEmpty()) {
                     break;
                 }
 
-                // Apply transformations and insert batch
-                for (Map<String, Object> row : batch) {
-                    applyTransformationsAndInsert(row, columnMappings, insertStmt);
-                    insertStmt.addBatch();
-                }
-
-                // Execute batch
-                int[] results = insertStmt.executeBatch();
+                insertBatch(batch, columnMappings, insertStmt);
                 targetConn.commit();
 
                 totalRows += batch.size();
                 task.setRowsProcessed(totalRows);
+                log.info("Task {}: Migrated {} rows (total: {})", task.getId(), batch.size(), totalRows);
 
-                log.info("Task {}: Migrated {} rows (total: {})",
-                        task.getId(), batch.size(), totalRows);
-
-                // Move to next batch
                 offset += BATCH_SIZE;
 
-                // If batch was smaller than BATCH_SIZE, we're done
                 if (batch.size() < BATCH_SIZE) {
                     break;
                 }
             }
         }
 
-        // Disable IDENTITY_INSERT for MSSQL AFTER PreparedStatement closes and all batches committed
-        // MUST be outside try-with-resources to ensure batch execution completes
-        if (targetDb == DatabaseTypeEnum.MSSQL && hasAutoIncrement) {
+        if (shouldEnableIdentityInsert(targetDb, hasAutoIncrement)) {
             disableIdentityInsert(targetConn, targetTableName, targetDb);
         }
 
@@ -292,6 +253,39 @@ public class DataMigrationService {
             // Type conversion if needed (JDBC handles most conversions automatically)
             insertStmt.setObject(i + 1, value);
         }
+    }
+
+    private boolean shouldEnableIdentityInsert(DatabaseTypeEnum targetDb, boolean hasAutoIncrement) {
+        return targetDb == DatabaseTypeEnum.MSSQL && hasAutoIncrement;
+    }
+
+    private List<Map<String, Object>> readBatch(Connection sourceConn, String sourceTableName,
+                                                 List<ColumnMapping> columnMappings, DatabaseTypeEnum sourceDb, int offset) throws SQLException {
+        String selectSQL = buildSelectStatement(sourceTableName, columnMappings, sourceDb, offset, BATCH_SIZE);
+        List<Map<String, Object>> batch = new ArrayList<>();
+
+        try (PreparedStatement selectStmt = sourceConn.prepareStatement(selectSQL);
+             ResultSet rs = selectStmt.executeQuery()) {
+
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                for (ColumnMapping mapping : columnMappings) {
+                    row.put(mapping.getSourceColumn(), rs.getObject(mapping.getSourceColumn()));
+                }
+                batch.add(row);
+            }
+        }
+
+        return batch;
+    }
+
+    private void insertBatch(List<Map<String, Object>> batch, List<ColumnMapping> columnMappings,
+                            PreparedStatement insertStmt) throws SQLException {
+        for (Map<String, Object> row : batch) {
+            applyTransformationsAndInsert(row, columnMappings, insertStmt);
+            insertStmt.addBatch();
+        }
+        insertStmt.executeBatch();
     }
 
     private boolean hasAutoIncrementColumn(TransformationTable table) {

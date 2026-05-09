@@ -28,7 +28,7 @@ public class AsyncCycleExecutor {
     private final CycleRepository cycleRepository;
     private final TaskRepository taskRepository;
     private final TaskScheduler taskScheduler;
-    private final ParallelExecutionService parallelExecutionService;
+    private final CycleExecutionService cycleExecutionService;
     private final TaskExecutor taskExecutor;
 
     @Async("cycleExecutionTaskExecutor")
@@ -51,31 +51,15 @@ public class AsyncCycleExecutor {
 
             // Check if target is MSSQL - force sequential execution due to IDENTITY_INSERT limitation
             // MSSQL only allows ONE table to have IDENTITY_INSERT ON at a time (database-wide lock)
-            boolean isMssqlTarget = cycle.getTargetConnector().getDatabaseType().name().equals("MSSQL");
-
-            if (isMssqlTarget) {
-                log.warn("Cycle {}: Target is MSSQL - forcing SEQUENTIAL execution due to IDENTITY_INSERT limitation (only one table can have IDENTITY_INSERT ON at a time)",
+            boolean forceSequential = isMssqlTarget(cycle);
+            if (forceSequential) {
+                log.warn("Cycle {}: Target is MSSQL - forcing SEQUENTIAL execution due to IDENTITY_INSERT limitation",
                         cycle.getId());
             }
 
-            // Execute batches (parallel for MySQL/PostgreSQL, sequential for MSSQL)
-            parallelExecutionService.executeBatches(taskBatches, cycle, taskExecutor, isMssqlTarget);
+            cycleExecutionService.executeBatches(taskBatches, cycle, taskExecutor, forceSequential);
 
-            // Check if all tasks completed successfully (fetch fresh from DB)
-            List<Task> tasks = taskRepository.findByCycle_Id(cycle.getId());
-            long failedCount = tasks.stream()
-                    .filter(t -> t.getStatus() == TaskStatusEnum.FAILED)
-                    .count();
-
-            if (failedCount > 0) {
-                cycle.setStatus(CycleStatusEnum.FAILED);
-                cycle.setErrorMessage(failedCount + " task(s) failed. Check task logs for details.");
-            } else {
-                cycle.setStatus(CycleStatusEnum.COMPLETED);
-            }
-
-            cycle.setCompletedAt(new Date());
-            cycleRepository.save(cycle);
+            updateCycleStatus(cycle);
 
             log.info("Cycle {}: Execution completed with status {}", cycle.getId(), cycle.getStatus());
 
@@ -89,5 +73,26 @@ public class AsyncCycleExecutor {
 
             throw new ExecutionException("Cycle execution failed: " + e.getMessage(), e);
         }
+    }
+
+    private boolean isMssqlTarget(Cycle cycle) {
+        return cycle.getTargetConnector().getDatabaseType().name().equals("MSSQL");
+    }
+
+    private void updateCycleStatus(Cycle cycle) {
+        List<Task> tasks = taskRepository.findByCycle_Id(cycle.getId());
+        long failedCount = tasks.stream()
+                .filter(t -> t.getStatus() == TaskStatusEnum.FAILED)
+                .count();
+
+        if (failedCount > 0) {
+            cycle.setStatus(CycleStatusEnum.FAILED);
+            cycle.setErrorMessage(failedCount + " task(s) failed. Check task logs for details.");
+        } else {
+            cycle.setStatus(CycleStatusEnum.COMPLETED);
+        }
+
+        cycle.setCompletedAt(new Date());
+        cycleRepository.save(cycle);
     }
 }
