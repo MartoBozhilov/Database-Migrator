@@ -18,6 +18,8 @@ public class CycleResponse {
     private String name;
     private Long transformationModelId;
     private String transformationModelName;
+    private Long sourceConnectorId;
+    private String sourceConnectorName;
     private Long targetConnectorId;
     private String targetConnectorName;
     private CycleStatusEnum status;

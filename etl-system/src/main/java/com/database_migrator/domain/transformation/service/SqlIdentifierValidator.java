@@ -30,7 +30,7 @@ public class SqlIdentifierValidator {
     public void loadReservedKeywords() {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            ClassPathResource resource = new ClassPathResource("reserved-keywords.json");
+            ClassPathResource resource = new ClassPathResource("migration/reserved-keywords.json");
             reservedKeywordsByDatabase = mapper.readValue(
                     resource.getInputStream(),
                     new TypeReference<>() {

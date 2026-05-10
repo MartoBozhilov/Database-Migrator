@@ -23,4 +23,5 @@ public class TaskResponse {
     private String errorMessage;
     private Long rowsProcessed;
     private List<String> dependsOn;
+    private List<TaskLogResponse> logs;
 }

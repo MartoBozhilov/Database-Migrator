@@ -14,7 +14,7 @@ import java.util.Date;
 public class TaskLogResponse {
 
     private Long id;
-    private String logLevel;
+    private Date timestamp;
+    private String level;
     private String message;
-    private Date createdAt;
 }

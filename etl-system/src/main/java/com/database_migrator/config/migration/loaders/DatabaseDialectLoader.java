@@ -28,7 +28,7 @@ import java.util.Map;
 @Slf4j
 public class DatabaseDialectLoader {
 
-    private static final String DIALECT_PATH = "database-dialects/";
+    private static final String DIALECT_PATH = "migration/database-dialects/";
     private final Map<DatabaseTypeEnum, DatabaseDialectConfig> dialects = new HashMap<>();
 
     @PostConstruct

@@ -7,9 +7,11 @@ import com.database_migrator.domain.connector.dto.ConnectionTestResponse;
 import com.database_migrator.domain.connector.dto.ConnectorResponse;
 import com.database_migrator.domain.execution.dto.CycleDetailsResponse;
 import com.database_migrator.domain.execution.dto.CycleResponse;
+import com.database_migrator.domain.execution.dto.TaskLogResponse;
 import com.database_migrator.domain.execution.dto.TaskResponse;
 import com.database_migrator.domain.execution.model.Cycle;
 import com.database_migrator.domain.execution.model.Task;
+import com.database_migrator.domain.execution.model.TaskLog;
 import com.database_migrator.domain.execution.model.TaskStatusEnum;
 import com.database_migrator.domain.scan.dto.ColumnMetadataResponse;
 import com.database_migrator.domain.scan.dto.RelationMetadataResponse;
@@ -415,6 +417,8 @@ public class ResponseMapper {
         response.setTransformationModelId(cycle.getTransformationModel().getId());
         response.setTransformationModelName(cycle.getTransformationModel().getName());
 
+        response.setSourceConnectorId(cycle.getSourceConnector().getId());
+        response.setSourceConnectorName(cycle.getSourceConnector().getName());
         response.setTargetConnectorId(cycle.getTargetConnector().getId());
         response.setTargetConnectorName(cycle.getTargetConnector().getName());
 
@@ -447,6 +451,10 @@ public class ResponseMapper {
         response.setName(cycle.getName());
         response.setTransformationModelId(cycle.getTransformationModel().getId());
         response.setTransformationModelName(cycle.getTransformationModel().getName());
+        response.setSourceConnectorId(cycle.getSourceConnector().getId());
+        response.setSourceConnectorName(cycle.getSourceConnector().getName());
+        response.setTargetConnectorId(cycle.getTargetConnector().getId());
+        response.setTargetConnectorName(cycle.getTargetConnector().getName());
         response.setStatus(cycle.getStatus());
         response.setCreatedAt(cycle.getCreatedAt());
         response.setStartedAt(cycle.getStartedAt());
@@ -458,6 +466,7 @@ public class ResponseMapper {
         // Count tasks by status
         if (cycle.getTasks() != null) {
             response.setTotalTasks(cycle.getTasks().size());
+            response.setTaskCount(cycle.getTasks().size()); // Alias for UI
             response.setCompletedTasks((int) cycle.getTasks().stream()
                 .filter(t -> t.getStatus() == TaskStatusEnum.COMPLETED)
                 .count());
@@ -497,6 +506,22 @@ public class ResponseMapper {
                 .collect(Collectors.toList()));
         }
 
+        // Map task logs
+        if (task.getLogs() != null) {
+            response.setLogs(task.getLogs().stream()
+                .map(this::toTaskLogResponse)
+                .collect(Collectors.toList()));
+        }
+
+        return response;
+    }
+
+    public TaskLogResponse toTaskLogResponse(TaskLog log) {
+        TaskLogResponse response = new TaskLogResponse();
+        response.setId(log.getId());
+        response.setTimestamp(log.getTimestamp());
+        response.setLevel(log.getLevel());
+        response.setMessage(log.getMessage());
         return response;
     }
 }

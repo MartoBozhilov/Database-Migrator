@@ -144,10 +144,17 @@ public class CycleService {
         return responseMapper.toCycleResponse(cycle);
     }
 
+    @Transactional(readOnly = true)
     public CycleDetailsResponse getDetails(Long id) {
         Long orgId = securityUtils.getCurrentOrganizationId();
-        Cycle cycle = cycleRepository.findByIdAndCreatedBy_Organization_Id(id, orgId)
+        Cycle cycle = cycleRepository.findByIdWithTasksAndLogs(id, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cycle", id));
+
+        // Explicitly initialize logs for each task
+        cycle.getTasks().forEach(task -> {
+            task.getLogs().size();
+        });
+
         return responseMapper.toCycleDetailsResponse(cycle);
     }
 

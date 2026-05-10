@@ -30,6 +30,23 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/cycles">Cycles</a>
                     </li>
+                    <li class="nav-item dropdown" id="adminMenu" style="display: none;">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-shield-lock"></i> Admin
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li id="adminOrgMenuItem">
+                                <a class="dropdown-item" href="/admin/organizations">
+                                    <i class="bi bi-building"></i> Organizations
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/admin/users">
+                                    <i class="bi bi-people"></i> Users
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
                 </ul>
                 <div class="d-flex align-items-center">
                     <a class="btn btn-outline-secondary btn-sm me-2" href="https://github.com/MartoBozhilov/Diploma-Project" target="_blank">
@@ -146,6 +163,22 @@
 
             function isAdmin() {
                 return hasRole('ADMIN') || hasRole('MIGRATION_ADMIN');
+            }
+
+            function isSuperAdmin() {
+                return hasRole('ADMIN');
+            }
+
+            // Show/hide Admin menu
+            if (isAdmin()) {
+                document.getElementById('adminMenu').style.display = 'block';
+                // Show Organizations only for super admin
+                if (!isSuperAdmin()) {
+                    const orgMenuItem = document.getElementById('adminOrgMenuItem');
+                    if (orgMenuItem) {
+                        orgMenuItem.style.display = 'none';
+                    }
+                }
             }
 
             // Hide tiles based on roles

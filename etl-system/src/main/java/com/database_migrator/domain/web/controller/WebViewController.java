@@ -70,4 +70,24 @@ public class WebViewController {
     public String profile() {
         return "profile";
     }
+
+    @GetMapping("/admin/organizations")
+    public String adminOrganizations() {
+        return "admin/organizations";
+    }
+
+    @GetMapping("/admin/organizations/{id}")
+    public String adminOrganizationDetail(@PathVariable Long id) {
+        return "admin/organization-detail";
+    }
+
+    @GetMapping("/admin/users")
+    public String adminUsers() {
+        return "admin/users";
+    }
+
+    @GetMapping("/admin/users/{id}")
+    public String adminUserDetail(@PathVariable Long id) {
+        return "admin/user-detail";
+    }
 }

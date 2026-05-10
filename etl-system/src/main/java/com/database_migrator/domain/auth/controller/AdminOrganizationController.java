@@ -49,4 +49,10 @@ public class AdminOrganizationController {
         OrganizationResponse response = organizationService.findById(id);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/{id}/users")
+    public ResponseEntity<List<UserResponse>> getOrganizationUsers(@PathVariable Long id) {
+        List<UserResponse> users = organizationService.getUsersByOrganization(id);
+        return ResponseEntity.ok(users);
+    }
 }

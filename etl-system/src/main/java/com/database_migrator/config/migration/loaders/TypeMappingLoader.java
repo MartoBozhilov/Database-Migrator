@@ -26,16 +26,16 @@ public class TypeMappingLoader {
 
     @PostConstruct
     public void loadMappings() {
-        loadTypeMapping(DatabaseTypeEnum.MYSQL, DatabaseTypeEnum.POSTGRESQL, "type-mappings/mysql-to-postgresql.json");
-        loadTypeMapping(DatabaseTypeEnum.MYSQL, DatabaseTypeEnum.MSSQL, "type-mappings/mysql-to-mssql.json");
-        loadTypeMapping(DatabaseTypeEnum.POSTGRESQL, DatabaseTypeEnum.MYSQL, "type-mappings/postgresql-to-mysql.json");
-        loadTypeMapping(DatabaseTypeEnum.POSTGRESQL, DatabaseTypeEnum.MSSQL, "type-mappings/postgresql-to-mssql.json");
-        loadTypeMapping(DatabaseTypeEnum.MSSQL, DatabaseTypeEnum.MYSQL, "type-mappings/mssql-to-mysql.json");
-        loadTypeMapping(DatabaseTypeEnum.MSSQL, DatabaseTypeEnum.POSTGRESQL, "type-mappings/mssql-to-postgresql.json");
+        loadTypeMapping(DatabaseTypeEnum.MYSQL, DatabaseTypeEnum.POSTGRESQL, "migration/type-mappings/mysql-to-postgresql.json");
+        loadTypeMapping(DatabaseTypeEnum.MYSQL, DatabaseTypeEnum.MSSQL, "migration/type-mappings/mysql-to-mssql.json");
+        loadTypeMapping(DatabaseTypeEnum.POSTGRESQL, DatabaseTypeEnum.MYSQL, "migration/type-mappings/postgresql-to-mysql.json");
+        loadTypeMapping(DatabaseTypeEnum.POSTGRESQL, DatabaseTypeEnum.MSSQL, "migration/type-mappings/postgresql-to-mssql.json");
+        loadTypeMapping(DatabaseTypeEnum.MSSQL, DatabaseTypeEnum.MYSQL, "migration/type-mappings/mssql-to-mysql.json");
+        loadTypeMapping(DatabaseTypeEnum.MSSQL, DatabaseTypeEnum.POSTGRESQL, "migration/type-mappings/mssql-to-postgresql.json");
 
-        loadTypeMapping(DatabaseTypeEnum.MYSQL, DatabaseTypeEnum.MYSQL, "type-mappings/mysql-to-mysql.json");
-        loadTypeMapping(DatabaseTypeEnum.POSTGRESQL, DatabaseTypeEnum.POSTGRESQL, "type-mappings/postgresql-to-postgresql.json");
-        loadTypeMapping(DatabaseTypeEnum.MSSQL, DatabaseTypeEnum.MSSQL, "type-mappings/mssql-to-mssql.json");
+        loadTypeMapping(DatabaseTypeEnum.MYSQL, DatabaseTypeEnum.MYSQL, "migration/type-mappings/mysql-to-mysql.json");
+        loadTypeMapping(DatabaseTypeEnum.POSTGRESQL, DatabaseTypeEnum.POSTGRESQL, "migration/type-mappings/postgresql-to-postgresql.json");
+        loadTypeMapping(DatabaseTypeEnum.MSSQL, DatabaseTypeEnum.MSSQL, "migration/type-mappings/mssql-to-mssql.json");
 
         log.info("Loaded type mappings for {} database pairs", typeMappings.size());
     }

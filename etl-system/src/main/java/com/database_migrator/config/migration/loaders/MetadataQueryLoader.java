@@ -25,9 +25,9 @@ public class MetadataQueryLoader {
 
     @PostConstruct
     public void loadQueries() {
-        loadQueryConfig(DatabaseTypeEnum.MYSQL, "metadata-queries/mysql.json");
-        loadQueryConfig(DatabaseTypeEnum.POSTGRESQL, "metadata-queries/postgresql.json");
-        loadQueryConfig(DatabaseTypeEnum.MSSQL, "metadata-queries/mssql.json");
+        loadQueryConfig(DatabaseTypeEnum.MYSQL, "migration/metadata-queries/mysql.json");
+        loadQueryConfig(DatabaseTypeEnum.POSTGRESQL, "migration/metadata-queries/postgresql.json");
+        loadQueryConfig(DatabaseTypeEnum.MSSQL, "migration/metadata-queries/mssql.json");
         log.info("Loaded metadata query configurations for {} database types", queryConfigs.size());
     }
 

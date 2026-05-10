@@ -31,7 +31,7 @@
 </head>
 <body>
     <!-- Header -->
-    <div th:replace="fragments/header :: header('transformations')"></div>
+    <div th:replace="~{fragments/header :: header('transformations')}"></div>
 
     <!-- Main Content -->
     <div class="container-fluid mt-4">
@@ -362,7 +362,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script th:replace="fragments/header :: auth-script"></script>
+    <script th:replace="~{fragments/header :: auth-script}"></script>
     <script>
         const modelId = window.location.pathname.split('/').pop();
         let modelData = null;
@@ -387,9 +387,9 @@
 
                 document.getElementById('detailScan').innerHTML = `<a href="/scans/${modelData.systemScanId}" class="text-decoration-none">${modelData.systemScanName}</a>`;
                 document.getElementById('detailSource').innerHTML = `<a href="/connectors/${modelData.sourceConnectorId}" class="text-decoration-none">${modelData.sourceConnectorName}</a>`;
-                document.getElementById('detailSourceDbType').textContent = modelData.sourceDatabaseType;
+                document.getElementById('detailSourceDbType').textContent = formatDatabaseType(modelData.sourceDatabaseType);
                 document.getElementById('detailTarget').innerHTML = `<a href="/connectors/${modelData.targetConnectorId}" class="text-decoration-none">${modelData.targetConnectorName}</a>`;
-                document.getElementById('detailTargetDbType').textContent = modelData.targetDatabaseType;
+                document.getElementById('detailTargetDbType').textContent = formatDatabaseType(modelData.targetDatabaseType);
                 document.getElementById('detailTableCount').textContent = modelData.tableCount || 0;
                 document.getElementById('detailRelationCount').textContent = modelData.relationCount || 0;
                 document.getElementById('detailCreatedBy').textContent = modelData.createdByName;
@@ -913,6 +913,15 @@
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
             return new Date(dateString).toLocaleString();
+        }
+
+        function formatDatabaseType(dbType) {
+            const dbTypeMap = {
+                'MYSQL': 'MySQL',
+                'POSTGRESQL': 'PostgreSQL',
+                'MSSQL': 'MS SQL Server'
+            };
+            return dbTypeMap[dbType] || dbType;
         }
 
         // Load model on page load

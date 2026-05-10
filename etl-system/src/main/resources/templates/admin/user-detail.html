@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Details - Database Migrator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <div th:replace="~{fragments/header :: header('admin')}"></div>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="/admin/users" class="btn btn-outline-secondary btn-sm mb-2">
+                    <i class="bi bi-arrow-left"></i> Back to Users
+                </a>
+                <h2><i class="bi bi-person-circle"></i> <span id="userName"></span></h2>
+            </div>
+            <button class="btn btn-danger" onclick="confirmDeleteUser()">
+                <i class="bi bi-trash"></i> Delete User
+            </button>
+        </div>
+
+        <!-- Loading spinner -->
+        <div id="loading" class="text-center my-5">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <!-- User details -->
+        <div id="userDetails" style="display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="bi bi-person"></i> User Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Username:</th>
+                                    <td id="detailUsername"></td>
+                                </tr>
+                                <tr>
+                                    <th>Email:</th>
+                                    <td id="detailEmail"></td>
+                                </tr>
+                                <tr>
+                                    <th>First Name:</th>
+                                    <td id="detailFirstName"></td>
+                                </tr>
+                                <tr>
+                                    <th>Last Name:</th>
+                                    <td id="detailLastName"></td>
+                                </tr>
+                                <tr>
+                                    <th>Organization:</th>
+                                    <td id="detailOrganization"></td>
+                                </tr>
+                                <tr>
+                                    <th>Created:</th>
+                                    <td id="detailCreatedAt"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="bi bi-shield-check"></i> Roles & Permissions</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">
+                                <i class="bi bi-info-circle"></i> Select roles to grant permissions to this user.
+                                MIGRATION_ADMIN cannot assign ADMIN or MIGRATION_ADMIN roles.
+                            </p>
+                            <div id="rolesCheckboxes">
+                                <!-- Checkboxes will be dynamically generated -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:replace="~{fragments/header :: auth-script}"></script>
+    <script>
+        const userId = window.location.pathname.split('/').pop();
+        let currentUserRoles = [];
+
+        const availableRoles = [
+            { role: 'CONNECTOR_USER', label: 'Connector User', description: 'Manage database connectors' },
+            { role: 'TRANSFORMATION_MODEL_USER', label: 'Transformation Model User', description: 'Create and manage transformation models' },
+            { role: 'CYCLE_EXECUTION_USER', label: 'Cycle Execution User', description: 'Execute data migration cycles' }
+        ];
+
+        async function loadUser() {
+            try {
+                const response = await apiCall(`/api/users/${userId}`);
+                const userData = await response.json();
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('userDetails').style.display = 'block';
+
+                document.getElementById('userName').textContent = userData.username;
+                document.getElementById('detailUsername').textContent = userData.username;
+                document.getElementById('detailEmail').textContent = userData.email;
+                document.getElementById('detailFirstName').textContent = userData.firstName || 'N/A';
+                document.getElementById('detailLastName').textContent = userData.lastName || 'N/A';
+                document.getElementById('detailOrganization').textContent = userData.organization?.name || 'N/A';
+                document.getElementById('detailCreatedAt').textContent = formatDate(userData.createdAt);
+
+                currentUserRoles = userData.roles || [];
+                renderRoleCheckboxes();
+
+            } catch (error) {
+                console.error('Error loading user:', error);
+                document.getElementById('loading').innerHTML =
+                    '<div class="alert alert-danger">Error loading user details</div>';
+            }
+        }
+
+        function renderRoleCheckboxes() {
+            const container = document.getElementById('rolesCheckboxes');
+
+            container.innerHTML = availableRoles.map(roleInfo => {
+                const isChecked = currentUserRoles.includes(roleInfo.role);
+                return `
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox"
+                               id="role_${roleInfo.role}"
+                               value="${roleInfo.role}"
+                               ${isChecked ? 'checked' : ''}
+                               onchange="toggleRole('${roleInfo.role}', this.checked)">
+                        <label class="form-check-label" for="role_${roleInfo.role}">
+                            <strong>${roleInfo.label}</strong><br>
+                            <small class="text-muted">${roleInfo.description}</small>
+                        </label>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function toggleRole(roleEnum, isChecked) {
+            try {
+                const endpoint = `/api/users/${userId}/roles`;
+                const method = isChecked ? 'POST' : 'DELETE';
+
+                const response = await apiCall(endpoint, method, { role: roleEnum });
+
+                if (response.ok) {
+                    const userData = await response.json();
+                    currentUserRoles = userData.roles || [];
+
+                    // Show success message
+                    showToast(isChecked ? 'Role assigned successfully' : 'Role removed successfully', 'success');
+                } else {
+                    const error = await response.json();
+                    // Revert checkbox
+                    document.getElementById(`role_${roleEnum}`).checked = !isChecked;
+                    showToast(error.message || 'Failed to update role', 'danger');
+                }
+            } catch (error) {
+                console.error('Error toggling role:', error);
+                // Revert checkbox
+                document.getElementById(`role_${roleEnum}`).checked = !isChecked;
+                showToast('An error occurred while updating role', 'danger');
+            }
+        }
+
+        async function confirmDeleteUser() {
+            if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await apiCall(`/api/users/${userId}`, 'DELETE');
+
+                if (response.status === 204) {
+                    showToast('User deleted successfully', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/admin/users';
+                    }, 1500);
+                } else {
+                    const error = await response.json();
+                    showToast(error.message || 'Failed to delete user', 'danger');
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showToast('An error occurred while deleting user', 'danger');
+            }
+        }
+
+        function showToast(message, type) {
+            // Create toast element
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            const toastContainer = document.createElement('div');
+            toastContainer.innerHTML = toastHtml;
+            document.body.appendChild(toastContainer);
+
+            const toastElement = toastContainer.querySelector('.toast');
+            const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+            toast.show();
+
+            // Remove from DOM after hidden
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastContainer.remove();
+            });
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            return new Date(dateString).toLocaleString();
+        }
+
+        loadUser();
+    </script>
+</body>
+</html>

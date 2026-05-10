@@ -120,6 +120,21 @@ public class OrganizationService {
                 .collect(Collectors.toList());
     }
 
+    public List<UserResponse> getUsersByOrganization(Long orgId) {
+        if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
+            throw new BusinessRuleException("Access denied: Only ADMIN can view organization users",
+                    "INSUFFICIENT_PERMISSIONS");
+        }
+
+        Organization organization = organizationRepository.findById(orgId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organization", orgId));
+
+        List<User> users = userRepository.findByOrganization_Id(orgId);
+        return users.stream()
+                .map(responseMapper::toUserResponse)
+                .collect(Collectors.toList());
+    }
+
     private Organization buildOrganization(OrganizationCreateRequest request) {
         return Organization.builder()
                 .name(request.getName())

@@ -55,68 +55,34 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
-        Long currentOrgId = securityUtils.getCurrentOrganizationId();
-        if (!user.getOrganization().getId().equals(currentOrgId)) {
-            throw new BusinessRuleException("Access denied: User belongs to different organization",
-                    "USER_ORGANIZATION_MISMATCH");
+        // ADMIN can view any user
+        // MIGRATION_ADMIN can only view users in their own organization
+        if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
+            Long currentOrgId = securityUtils.getCurrentOrganizationId();
+            if (!user.getOrganization().getId().equals(currentOrgId)) {
+                throw new BusinessRuleException("Access denied: User belongs to different organization",
+                        "USER_ORGANIZATION_MISMATCH");
+            }
         }
 
         return responseMapper.toUserResponse(user);
     }
 
     public List<UserResponse> findAllInOrganization() {
-        Long organizationId = securityUtils.getCurrentOrganizationId();
-        List<User> users = userRepository.findByOrganization_Id(organizationId);
+        // ADMIN can see all users from all organizations
+        // MIGRATION_ADMIN can only see users in their own organization
+        List<User> users;
+
+        if (SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
+            users = userRepository.findAll();
+        } else {
+            Long organizationId = securityUtils.getCurrentOrganizationId();
+            users = userRepository.findByOrganization_Id(organizationId);
+        }
 
         return users.stream()
                 .map(responseMapper::toUserResponse)
                 .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public UserResponse assignRole(Long userId, UserRoleEnum roleEnum) {
-        // Only ADMIN can assign roles (accessed via /api/admin/users/{id}/roles)
-        if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
-            throw new BusinessRuleException("Access denied: Only ADMIN can assign roles",
-                    "INSUFFICIENT_PERMISSIONS");
-        }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-
-        UserRole role = userRoleRepository.findByRole(roleEnum)
-                .orElseThrow(() -> new ResourceNotFoundException("UserRole", roleEnum.name()));
-
-        if (!user.getRoles().contains(role)) {
-            user.getRoles().add(role);
-            user.setTokenVersion(user.getTokenVersion() + 1);
-            user = userRepository.save(user);
-            tokenVersionCache.invalidate(user.getEmail());
-        }
-
-        return responseMapper.toUserResponse(user);
-    }
-
-    @Transactional
-    public UserResponse removeRole(Long userId, UserRoleEnum roleEnum) {
-        if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
-            throw new BusinessRuleException("Access denied: Only ADMIN can remove roles",
-                    "INSUFFICIENT_PERMISSIONS");
-        }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-
-
-        UserRole role = userRoleRepository.findByRole(roleEnum)
-                .orElseThrow(() -> new ResourceNotFoundException("UserRole", roleEnum.name()));
-
-        user.getRoles().remove(role);
-        user.setTokenVersion(user.getTokenVersion() + 1);
-        user = userRepository.save(user);
-        tokenVersionCache.invalidate(user.getEmail());
-
-        return responseMapper.toUserResponse(user);
     }
 
     @Transactional
@@ -136,10 +102,14 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
-        Long currentOrgId = securityUtils.getCurrentOrganizationId();
-        if (!user.getOrganization().getId().equals(currentOrgId)) {
-            throw new BusinessRuleException("Access denied: User belongs to different organization",
-                    "USER_ORGANIZATION_MISMATCH");
+        // ADMIN can manage users in any organization
+        // MIGRATION_ADMIN can only manage users in their own organization
+        if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
+            Long currentOrgId = securityUtils.getCurrentOrganizationId();
+            if (!user.getOrganization().getId().equals(currentOrgId)) {
+                throw new BusinessRuleException("Access denied: User belongs to different organization",
+                        "USER_ORGANIZATION_MISMATCH");
+            }
         }
 
         UserRole role = userRoleRepository.findByRole(roleEnum)
@@ -165,10 +135,14 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
-        Long currentOrgId = securityUtils.getCurrentOrganizationId();
-        if (!user.getOrganization().getId().equals(currentOrgId)) {
-            throw new BusinessRuleException("Access denied: User belongs to different organization",
-                    "USER_ORGANIZATION_MISMATCH");
+        // ADMIN can manage users in any organization
+        // MIGRATION_ADMIN can only manage users in their own organization
+        if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
+            Long currentOrgId = securityUtils.getCurrentOrganizationId();
+            if (!user.getOrganization().getId().equals(currentOrgId)) {
+                throw new BusinessRuleException("Access denied: User belongs to different organization",
+                        "USER_ORGANIZATION_MISMATCH");
+            }
         }
 
         UserRole role = userRoleRepository.findByRole(roleEnum)
@@ -187,10 +161,14 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
-        Long currentOrgId = securityUtils.getCurrentOrganizationId();
-        if (!user.getOrganization().getId().equals(currentOrgId)) {
-            throw new BusinessRuleException("Access denied: User belongs to different organization",
-                    "USER_ORGANIZATION_MISMATCH");
+        // ADMIN can delete users in any organization
+        // MIGRATION_ADMIN can only delete users in their own organization
+        if (!SecurityUtils.hasRole(UserRoleEnum.ADMIN)) {
+            Long currentOrgId = securityUtils.getCurrentOrganizationId();
+            if (!user.getOrganization().getId().equals(currentOrgId)) {
+                throw new BusinessRuleException("Access denied: User belongs to different organization",
+                        "USER_ORGANIZATION_MISMATCH");
+            }
         }
 
         userRepository.delete(user);
