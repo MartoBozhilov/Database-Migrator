@@ -39,6 +39,7 @@ public class DataMigrationService {
 
     private final TypeResolutionService typeResolutionService;
     private final DatabaseDialectLoader dialectLoader;
+    private final EnumTypeHandler enumTypeHandler;
 
     /**
      * Migrate data from source to target table in batches
@@ -167,11 +168,21 @@ public class DataMigrationService {
 
         sql.append(") VALUES (");
 
-        // Placeholders
-        sql.append(columnMappings.stream()
-                .map(m -> "?")
-                .collect(Collectors.joining(", ")));
+        // Placeholders with ENUM casting for PostgreSQL
+        List<String> placeholders = new ArrayList<>();
+        for (ColumnMapping mapping : columnMappings) {
+            String placeholder = "?";
 
+            // For PostgreSQL ENUM types, cast the parameter
+            if (targetDb == DatabaseTypeEnum.POSTGRESQL && enumTypeHandler.isEnumType(mapping.getTargetType())) {
+                String enumTypeName = enumTypeHandler.generateEnumTypeName(tableName, mapping.getTargetColumn());
+                placeholder = "CAST(? AS " + enumTypeName + ")";
+            }
+
+            placeholders.add(placeholder);
+        }
+
+        sql.append(String.join(", ", placeholders));
         sql.append(")");
 
         return sql.toString();
@@ -260,7 +271,8 @@ public class DataMigrationService {
     }
 
     private List<Map<String, Object>> readBatch(Connection sourceConn, String sourceTableName,
-                                                 List<ColumnMapping> columnMappings, DatabaseTypeEnum sourceDb, int offset) throws SQLException {
+                                                List<ColumnMapping> columnMappings, DatabaseTypeEnum sourceDb, int offset) throws SQLException {
+
         String selectSQL = buildSelectStatement(sourceTableName, columnMappings, sourceDb, offset, BATCH_SIZE);
         List<Map<String, Object>> batch = new ArrayList<>();
 
@@ -280,7 +292,8 @@ public class DataMigrationService {
     }
 
     private void insertBatch(List<Map<String, Object>> batch, List<ColumnMapping> columnMappings,
-                            PreparedStatement insertStmt) throws SQLException {
+                             PreparedStatement insertStmt) throws SQLException {
+
         for (Map<String, Object> row : batch) {
             applyTransformationsAndInsert(row, columnMappings, insertStmt);
             insertStmt.addBatch();

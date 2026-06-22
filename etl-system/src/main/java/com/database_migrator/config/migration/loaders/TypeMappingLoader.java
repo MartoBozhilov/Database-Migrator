@@ -84,8 +84,17 @@ public class TypeMappingLoader {
                                                    DatabaseTypeEnum targetDb) {
 
         TypeMappingConfig config = getMapping(sourceDb, targetDb);
-        String normalizedSourceType = normalizeType(sourceType);
 
+        // Try exact match first (case-insensitive) - for special types like "TINYINT(1)"
+        String exactMatch = sourceType.trim().toUpperCase();
+        List<TypeMapping> exactMappings = config.getMappings().get(exactMatch);
+        if (exactMappings != null && !exactMappings.isEmpty()) {
+            log.debug("Found exact type mapping for: {}", exactMatch);
+            return exactMappings;
+        }
+
+        // Fall back to normalized match (strips precision)
+        String normalizedSourceType = normalizeType(sourceType);
         return config.getMappings().getOrDefault(normalizedSourceType, List.of());
     }
 

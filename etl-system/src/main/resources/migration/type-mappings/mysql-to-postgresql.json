@@ -120,6 +120,7 @@
       {"targetType": "jsonb", "dataLossRisk": false}
     ],
     "ENUM": [
+      {"targetType": "ENUM", "dataLossRisk": false},
       {"targetType": "varchar", "dataLossRisk": false},
       {"targetType": "text", "dataLossRisk": false}
     ],

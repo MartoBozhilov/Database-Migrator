@@ -114,6 +114,8 @@ public class TypeResolutionService {
      * Resolve cross-database type conversion.
      * Picks the best (safest) target type from allowed options.
      * Preserves precision and scale from source type (e.g., DECIMAL(10,2) → numeric(10,2))
+     * Preserves ENUM definitions for PostgreSQL (e.g., ENUM('A','B') → ENUM('A','B'))
+     * Special handling for exact type matches (e.g., TINYINT(1) → boolean, no precision appended)
      */
     private String resolveCrossDatabaseType(String sourceType,
                                             DatabaseTypeEnum sourceDb,
@@ -123,8 +125,15 @@ public class TypeResolutionService {
             String baseSourceType = extractBaseType(sourceType);
             String precision = extractPrecision(sourceType);
 
+            // Special handling for ENUM types going to PostgreSQL - preserve the full definition
+            if ("ENUM".equalsIgnoreCase(baseSourceType) && targetDb == DatabaseTypeEnum.POSTGRESQL) {
+                log.debug("Preserving ENUM type for PostgreSQL: {}", sourceType);
+                return sourceType; // Keep full ENUM('value1','value2') definition
+            }
+
+            // TypeMappingLoader now tries exact match first, then normalized match
             List<TypeMapping> allowedTypes = typeMappingLoader
-                    .getAllowedTargetTypes(baseSourceType, sourceDb, targetDb);
+                    .getAllowedTargetTypes(sourceType, sourceDb, targetDb);
 
             if (allowedTypes.isEmpty()) {
                 log.warn("No type mapping found for {} {} → {}, keeping source type",
@@ -140,10 +149,19 @@ public class TypeResolutionService {
 
             String targetBaseType = bestMapping.getTargetType();
 
-            // Append precision to target type if it exists in source type
-            String resolvedType = (precision != null && !precision.isEmpty())
-                    ? targetBaseType + precision
-                    : targetBaseType;
+            // Check if this was an exact match (sourceType contains precision and matched exactly)
+            // In that case, don't append precision (e.g., TINYINT(1) → boolean, not boolean(1))
+            boolean wasExactMatch = (precision != null) &&
+                    !typeMappingLoader.getAllowedTargetTypes(baseSourceType, sourceDb, targetDb)
+                            .equals(allowedTypes);
+
+            // Append precision to target type if it exists in source type and wasn't an exact match
+            String resolvedType;
+            if (precision != null && !precision.isEmpty() && !wasExactMatch) {
+                resolvedType = targetBaseType + precision;
+            } else {
+                resolvedType = targetBaseType;
+            }
 
             log.debug("Resolved {} {} → {} {}",
                     sourceDb, sourceType, targetDb, resolvedType);

@@ -27,10 +27,22 @@ public class DDLGenerator {
 
     private final TypeResolutionService typeResolutionService;
     private final DatabaseDialectLoader dialectLoader;
+    private final EnumTypeHandler enumTypeHandler;
 
     public String generateCreateTableDDL(TransformationTable table, TransformationModel model, DatabaseTypeEnum targetDb) {
         String tableName = TransformationUtils.getEffectiveTableName(table);
         StringBuilder ddl = new StringBuilder();
+
+        // For PostgreSQL: Generate CREATE TYPE statements for ENUM columns first
+        if (targetDb == DatabaseTypeEnum.POSTGRESQL) {
+            List<String> enumTypeStatements = generateEnumTypeStatements(table, tableName, targetDb);
+            for (String enumTypeStmt : enumTypeStatements) {
+                ddl.append(enumTypeStmt).append(";\n");
+            }
+            if (!enumTypeStatements.isEmpty()) {
+                ddl.append("\n"); // Blank line before CREATE TABLE
+            }
+        }
 
         ddl.append("CREATE TABLE ");
         ddl.append(dialectLoader.escapeIdentifier(tableName, targetDb)).append(" (\n");
@@ -45,7 +57,7 @@ public class DDLGenerator {
             }
 
             String columnName = TransformationUtils.getEffectiveColumnName(column);
-            String columnDef = generateColumnDefinition(column, targetDb);
+            String columnDef = generateColumnDefinition(column, tableName, targetDb);
             columnDefs.add(columnDef);
 
             // Track PK columns
@@ -70,6 +82,7 @@ public class DDLGenerator {
         ddl.append("\n)");
 
         log.debug("Generated CREATE TABLE DDL for table {}: {} characters", tableName, ddl.length());
+        log.debug("Generated DDL for table {}:\n{}", tableName, ddl);
 
         return ddl.toString();
     }
@@ -77,7 +90,7 @@ public class DDLGenerator {
     /**
      * Generate column definition with database-specific syntax
      */
-    private String generateColumnDefinition(TransformationColumn column, DatabaseTypeEnum targetDb) {
+    private String generateColumnDefinition(TransformationColumn column, String tableName, DatabaseTypeEnum targetDb) {
         String columnName = TransformationUtils.getEffectiveColumnName(column);
         String dataType = typeResolutionService.getEffectiveColumnType(column);
 
@@ -88,7 +101,14 @@ public class DDLGenerator {
         if (isAutoIncrement(column)) {
             def.append(" ").append(dialectLoader.getAutoIncrementDefinition(dataType, targetDb));
         } else {
-            def.append(" ").append(dataType);
+            // For PostgreSQL: Convert ENUM types to custom type names
+            String finalType = dataType;
+            if (targetDb == DatabaseTypeEnum.POSTGRESQL && enumTypeHandler.isEnumType(dataType)) {
+                String enumTypeName = enumTypeHandler.generateEnumTypeName(tableName, columnName);
+                finalType = enumTypeName;
+                log.debug("Using custom ENUM type {} for column {}.{}", enumTypeName, tableName, columnName);
+            }
+            def.append(" ").append(finalType);
         }
 
         // NULL/NOT NULL
@@ -114,6 +134,44 @@ public class DDLGenerator {
             return Boolean.TRUE.equals(column.getSourceColumnMetadata().getIsAutoIncrement());
         }
         return false;
+    }
+
+    /**
+     * Generate CREATE TYPE statements for all ENUM columns in a table
+     */
+    private List<String> generateEnumTypeStatements(TransformationTable table, String tableName, DatabaseTypeEnum targetDb) {
+        List<String> statements = new ArrayList<>();
+
+        for (TransformationColumn column : table.getColumns()) {
+            if (TransformationUtils.isColumnDeleted(column)) {
+                continue;
+            }
+
+            String dataType = typeResolutionService.getEffectiveColumnType(column);
+
+            // Check if this is an ENUM type
+            if (enumTypeHandler.isEnumType(dataType)) {
+                String columnName = TransformationUtils.getEffectiveColumnName(column);
+                List<String> enumValues = enumTypeHandler.extractEnumValues(dataType);
+
+                if (!enumValues.isEmpty()) {
+                    String typeName = enumTypeHandler.generateEnumTypeName(tableName, columnName);
+
+                    // Generate DROP TYPE IF EXISTS first (for safety on re-run)
+                    statements.add(enumTypeHandler.generateDropTypeStatement(typeName));
+
+                    // Generate CREATE TYPE
+                    String createTypeStmt = enumTypeHandler.generateCreateTypeStatement(typeName, enumValues);
+                    if (createTypeStmt != null) {
+                        statements.add(createTypeStmt);
+                        log.info("Generated ENUM type {} with {} values for {}.{}",
+                                typeName, enumValues.size(), tableName, columnName);
+                    }
+                }
+            }
+        }
+
+        return statements;
     }
 
     /**

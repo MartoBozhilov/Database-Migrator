@@ -2,6 +2,7 @@ package com.database_migrator.domain.common.util;
 
 import com.database_migrator.domain.common.exception.ExecutionException;
 import com.database_migrator.domain.connector.model.Connector;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +16,10 @@ import java.sql.SQLException;
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class DatabaseConnectionManager {
+
+    private final EncryptionUtils encryptionUtils;
 
     public Connection createConnection(Connector connector) {
         String jdbcUrl = JdbcUtils.buildJdbcUrl(connector);
@@ -25,10 +29,12 @@ public class DatabaseConnectionManager {
                     connector.getDatabaseType(),
                     connector.getHost());
 
+            String decryptedPassword = encryptionUtils.decrypt(connector.getPassword());
+
             Connection conn = DriverManager.getConnection(
                     jdbcUrl,
                     connector.getUsername(),
-                    connector.getPassword()
+                    decryptedPassword
             );
 
             // Disable auto-commit for batch operations

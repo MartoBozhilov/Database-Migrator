@@ -16,6 +16,7 @@ import com.database_migrator.domain.scan.service.MetadataExtractionService;
 import com.database_migrator.domain.common.exception.ResourceNotFoundException;
 import com.database_migrator.domain.common.exception.BusinessRuleException;
 import com.database_migrator.domain.common.exception.ValidationException;
+import com.database_migrator.domain.common.util.EncryptionUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ public class ConnectorService {
     private final SecurityUtils securityUtils;
     private final ResponseMapper responseMapper;
     private final MetadataExtractionService metadataExtractionService;
+    private final EncryptionUtils encryptionUtils;
 
     @Transactional
     public ConnectorResponse create(ConnectorCreateRequest request) {
@@ -104,7 +106,7 @@ public class ConnectorService {
             connector.setUsername(request.getUsername());
         }
         if (request.getPassword() != null) {
-            connector.setPassword(request.getPassword());
+            connector.setPassword(encryptionUtils.encrypt(request.getPassword()));
         }
 
         connector.setUpdatedAt(new Date());
@@ -165,7 +167,7 @@ public class ConnectorService {
         connector.setPort(request.getPort());
         connector.setDatabaseName(request.getDatabaseName());
         connector.setUsername(request.getUsername());
-        connector.setPassword(request.getPassword());
+        connector.setPassword(encryptionUtils.encrypt(request.getPassword()));
         connector.setCreatedBy(user);
         connector.setCreatedAt(new Date());
         connector.setUpdatedAt(new Date());
